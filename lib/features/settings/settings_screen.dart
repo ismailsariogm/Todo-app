@@ -70,6 +70,18 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
 
+          // ── Engellenenler ──────────────────────────────────────────────────
+          GlassSectionLabel(l.blockedUsers),
+          GlassCard(
+            child: GlassTile(
+              icon: Icons.block_outlined,
+              title: l.blockedUsers,
+              subtitle: l.blockedUsersSubtitle,
+              onTap: () => context.push(AppRoutes.blockedUsers),
+            ),
+          ),
+          const SizedBox(height: 16),
+
           // ── Görünüm ───────────────────────────────────────────────────────
           GlassSectionLabel(l.appearance),
           GlassCard(

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/app_l10n.dart';
+import '../../../app/providers.dart';
 import '../../../domain/entities/conversation_entity.dart';
 import '../../../domain/entities/message_entity.dart';
+import '../../auth/auth_provider.dart';
 import '../../tasks/widgets/home_background.dart';
 import '../chat_provider.dart';
 import '../widgets/chat_attach_sheet.dart';
@@ -62,6 +65,57 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
         );
     setState(() => _sending = false);
     _scrollToBottom();
+  }
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => _DeleteDialog(),
+    );
+    if (confirmed == true && mounted) {
+      await ref.read(chatActionsProvider).deleteConversation(
+            widget.conversation.id,
+          );
+      ref.read(activeConversationProvider.notifier).state = null;
+    }
+  }
+
+  Future<void> _confirmBlock(BuildContext context) async {
+    final l = ref.read(appL10nProvider);
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+    final other = widget.conversation.participants
+        .where((p) => p.uid != user.uid)
+        .firstOrNull;
+    if (other == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF1A0533),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(l.blockConfirm, style: const TextStyle(color: Colors.white)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l.cancel, style: TextStyle(color: Colors.white.withValues(alpha: 0.7))),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l.blockUser),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await ref.read(chatActionsProvider).blockFriend(other.uid);
+      ref.read(activeConversationProvider.notifier).state = null;
+      await ref.read(chatActionsProvider).deleteConversation(widget.conversation.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.blockSuccess)));
+      }
+    }
   }
 
   @override
@@ -131,21 +185,46 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                     color: Colors.white70, size: 22),
                 onPressed: () => _showCallComingSoon(context),
               ),
-              IconButton(
-                icon: const Icon(Icons.delete_outline,
-                    color: Colors.white70, size: 22),
-                onPressed: () async {
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (_) => _DeleteDialog(),
-                  );
-                  if (confirmed == true) {
-                    await ref.read(chatActionsProvider).deleteConversation(
-                          widget.conversation.id,
-                        );
-                  }
-                },
-              ),
+              if (isGroup)
+                IconButton(
+                  icon: const Icon(Icons.delete_outline,
+                      color: Colors.white70, size: 22),
+                  onPressed: () => _confirmDelete(context),
+                )
+              else
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, color: Colors.white70, size: 22),
+                  color: const Color(0xFF2A1060),
+                  onSelected: (v) async {
+                    if (v == 'delete') await _confirmDelete(context);
+                    else if (v == 'block') await _confirmBlock(context);
+                  },
+                  itemBuilder: (_) {
+                    final l = ref.read(appL10nProvider);
+                    return [
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete_outline, color: Colors.white70, size: 20),
+                            SizedBox(width: 10),
+                            Text('Sohbeti Sil', style: TextStyle(color: Colors.white70)),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'block',
+                        child: Row(
+                          children: [
+                            Icon(Icons.block, color: Colors.red.shade300, size: 20),
+                            const SizedBox(width: 10),
+                            Text(l.blockUser, style: TextStyle(color: Colors.red.shade300)),
+                          ],
+                        ),
+                      ),
+                    ];
+                  },
+                ),
             ],
           ),
           body: Column(

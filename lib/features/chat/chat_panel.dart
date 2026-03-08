@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../app/app_l10n.dart';
+import '../../app/providers.dart';
 import '../../domain/entities/chat_user_entity.dart';
 import '../../domain/entities/conversation_entity.dart';
 import 'chat_provider.dart';
@@ -444,7 +446,7 @@ class _ConversationList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final convsAsync = ref.watch(conversationsStreamProvider);
+    final convsAsync = ref.watch(filteredConversationsProvider);
 
     return convsAsync.when(
       loading: () => const Center(
@@ -640,7 +642,7 @@ class _FriendList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final friendsAsync = ref.watch(friendsStreamProvider);
+    final friendsAsync = ref.watch(filteredFriendsProvider);
 
     return friendsAsync.when(
       loading: () => const Center(
@@ -649,7 +651,7 @@ class _FriendList extends ConsumerWidget {
           child:
               Text(e.toString(), style: const TextStyle(color: Colors.white70))),
       data: (friends) {
-        final filtered = query.isEmpty
+        final searchFiltered = query.isEmpty
             ? friends
             : friends
                 .where((f) => f.displayName
@@ -657,7 +659,7 @@ class _FriendList extends ConsumerWidget {
                     .contains(query.toLowerCase()))
                 .toList();
 
-        if (filtered.isEmpty) {
+        if (searchFiltered.isEmpty) {
           return _EmptyState(
             icon: Icons.people_outline,
             message: query.isEmpty ? 'Arkadaş listeniz boş' : 'Sonuç bulunamadı',
@@ -669,19 +671,27 @@ class _FriendList extends ConsumerWidget {
 
         return ListView.builder(
           padding: const EdgeInsets.symmetric(vertical: 4),
-          itemCount: filtered.length,
+          itemCount: searchFiltered.length,
           itemBuilder: (_, i) => _FriendTile(
-            friend: filtered[i],
+            friend: searchFiltered[i],
             onChat: () async {
               final conv = await ref
                   .read(chatActionsProvider)
-                  .openDirectChat(filtered[i]);
+                  .openDirectChat(searchFiltered[i]);
               if (conv != null) onClose();
             },
             onRemove: () async {
               await ref
                   .read(chatActionsProvider)
-                  .removeFriend(filtered[i].uid);
+                  .removeFriend(searchFiltered[i].uid);
+            },
+            onBlock: () async {
+              await ref.read(chatActionsProvider).blockFriend(searchFiltered[i].uid);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(ref.read(appL10nProvider).blockSuccess)),
+                );
+              }
             },
           ),
         );
@@ -690,15 +700,17 @@ class _FriendList extends ConsumerWidget {
   }
 }
 
-class _FriendTile extends StatelessWidget {
+class _FriendTile extends ConsumerWidget {
   const _FriendTile({
     required this.friend,
     required this.onChat,
     required this.onRemove,
+    required this.onBlock,
   });
   final ChatUserEntity friend;
   final VoidCallback onChat;
   final VoidCallback onRemove;
+  final VoidCallback onBlock;
 
   Color _parseHex(String hex) {
     try {
@@ -710,7 +722,8 @@ class _FriendTile extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = ref.watch(appL10nProvider);
     return Dismissible(
       key: Key(friend.uid),
       direction: DismissDirection.endToStart,
@@ -781,8 +794,7 @@ class _FriendTile extends StatelessWidget {
                   ],
                 ),
               ),
-              IconButton(
-                onPressed: onChat,
+              PopupMenuButton<String>(
                 icon: Container(
                   width: 34,
                   height: 34,
@@ -795,6 +807,34 @@ class _FriendTile extends StatelessWidget {
                   child: const Icon(Icons.chat_bubble_outline,
                       color: Colors.white, size: 16),
                 ),
+                color: const Color(0xFF2A1060),
+                onSelected: (value) {
+                  if (value == 'chat') onChat();
+                  else if (value == 'block') onBlock();
+                },
+                itemBuilder: (_) => [
+                  PopupMenuItem(
+                    value: 'chat',
+                    child: Row(
+                      children: [
+                        Icon(Icons.chat_bubble_outline,
+                            color: Colors.white.withValues(alpha: 0.9), size: 20),
+                        const SizedBox(width: 10),
+                        Text('Sohbet', style: TextStyle(color: Colors.white.withValues(alpha: 0.9))),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'block',
+                    child: Row(
+                      children: [
+                        Icon(Icons.block, color: Colors.red.shade300, size: 20),
+                        const SizedBox(width: 10),
+                        Text(l.blockUser, style: TextStyle(color: Colors.red.shade300)),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

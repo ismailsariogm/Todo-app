@@ -113,7 +113,7 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final friends = ref.watch(friendsStreamProvider).valueOrNull ?? [];
+    final friends = ref.watch(filteredFriendsProvider).valueOrNull ?? [];
     final membersAsync = _isEdit
         ? ref.watch(
             StreamProvider((_) => ref

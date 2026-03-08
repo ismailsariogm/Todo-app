@@ -129,7 +129,7 @@ class _ChatAttachSheetContentState extends ConsumerState<_ChatAttachSheetContent
   }
 
   Future<void> _shareContact() async {
-    final friendsAsync = ref.read(friendsStreamProvider);
+    final friendsAsync = ref.read(filteredFriendsProvider);
     final friends = friendsAsync.valueOrNull ?? [];
     if (friends.isEmpty) {
       _showError('Paylaşılacak arkadaş bulunamadı');

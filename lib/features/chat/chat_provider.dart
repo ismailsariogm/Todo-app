@@ -6,6 +6,7 @@ import '../../domain/entities/chat_user_entity.dart';
 import '../../domain/entities/conversation_entity.dart';
 import '../../domain/entities/message_entity.dart';
 import '../auth/auth_provider.dart';
+import '../settings/blocked_users_provider.dart' show blockedUsersStorageProvider, myInvisibleUserIdsProvider, blockedUsersListProvider, blockedUserIdsProvider;
 
 // ─── Repository ───────────────────────────────────────────────────────────────
 
@@ -48,6 +49,22 @@ final friendsStreamProvider = StreamProvider<List<ChatUserEntity>>((ref) {
   return ref.read(chatRepositoryProvider).watchFriends(user.uid);
 });
 
+/// Engellenen kullanıcılar filtrelenmiş arkadaş listesi
+final filteredFriendsProvider = Provider<AsyncValue<List<ChatUserEntity>>>((ref) {
+  final friendsAsync = ref.watch(friendsStreamProvider);
+  final invisibleAsync = ref.watch(myInvisibleUserIdsProvider);
+
+  if (friendsAsync.isLoading) return const AsyncValue.loading();
+  if (friendsAsync.hasError) return AsyncValue.error(friendsAsync.error!, friendsAsync.stackTrace!);
+
+  final friends = friendsAsync.value!;
+  if (invisibleAsync.isLoading) return AsyncValue.data(friends);
+  if (invisibleAsync.hasError) return AsyncValue.data(friends);
+
+  final invisible = invisibleAsync.value!;
+  return AsyncValue.data(friends.where((f) => !invisible.contains(f.uid)).toList());
+});
+
 // ─── Conversations stream ─────────────────────────────────────────────────────
 
 final conversationsStreamProvider =
@@ -55,6 +72,31 @@ final conversationsStreamProvider =
   final user = ref.watch(currentUserProvider);
   if (user == null) return const Stream.empty();
   return ref.read(chatRepositoryProvider).watchConversations(user.uid);
+});
+
+/// Engellenen kullanıcılarla olan direkt sohbetler filtrelenmiş
+final filteredConversationsProvider =
+    Provider<AsyncValue<List<ConversationEntity>>>((ref) {
+  final convsAsync = ref.watch(conversationsStreamProvider);
+  final invisibleAsync = ref.watch(myInvisibleUserIdsProvider);
+  final user = ref.watch(currentUserProvider);
+
+  if (convsAsync.isLoading) return const AsyncValue.loading();
+  if (convsAsync.hasError) return AsyncValue.error(convsAsync.error!, convsAsync.stackTrace!);
+
+  final convs = convsAsync.value!;
+  if (user == null) return AsyncValue.data(convs);
+  if (invisibleAsync.isLoading) return AsyncValue.data(convs);
+  if (invisibleAsync.hasError) return AsyncValue.data(convs);
+
+  final invisible = invisibleAsync.value!;
+  final filtered = convs.where((c) {
+    if (c.type != ConversationType.direct) return true;
+    final others = c.participants.where((p) => p.uid != user.uid);
+    if (others.isEmpty) return true;
+    return !invisible.contains(others.first.uid);
+  }).toList();
+  return AsyncValue.data(filtered);
 });
 
 // ─── Messages stream (per conversation) ──────────────────────────────────────
@@ -162,6 +204,17 @@ class ChatActions {
     final user = _ref.read(currentUserProvider);
     if (user == null) return;
     await _repo.removeFriend(user.uid, friendUid);
+  }
+
+  /// Arkadaşı engeller (arkadaşlıktan çıkarır ve engeller).
+  Future<void> blockFriend(String friendUid) async {
+    final user = _ref.read(currentUserProvider);
+    if (user == null) return;
+    await _repo.removeFriend(user.uid, friendUid);
+    await _ref.read(blockedUsersStorageProvider).blockUser(user.uid, friendUid);
+    _ref.invalidate(myInvisibleUserIdsProvider);
+    _ref.invalidate(blockedUsersListProvider);
+    _ref.invalidate(blockedUserIdsProvider(user.uid));
   }
 }
 

@@ -60,7 +60,7 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
     final groupAsync = ref.watch(sharedGroupsProvider);
     final communityAsync = ref.watch(sharedCommunityGroupsProvider);
     final membersAsync = ref.watch(groupMembersProvider(widget.groupId));
-    final friends = ref.watch(friendsStreamProvider).valueOrNull ?? [];
+    final friends = ref.watch(filteredFriendsProvider).valueOrNull ?? [];
 
     final projectAsync = ref.watch(projectByIdProvider(widget.groupId));
     final group = groupAsync.valueOrNull

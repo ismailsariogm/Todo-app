@@ -365,7 +365,7 @@ class _PrivacyBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final friends = ref.watch(friendsStreamProvider).valueOrNull ?? [];
+    final friends = ref.watch(filteredFriendsProvider).valueOrNull ?? [];
 
     final bool hasFriends = friends.isNotEmpty;
     final Color color =

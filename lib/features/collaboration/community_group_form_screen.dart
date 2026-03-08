@@ -118,7 +118,7 @@ class _CommunityGroupFormScreenState
         ? _subGroupNameCtrls[index].text.trim()
         : 'Alt grup ${index + 1}';
     final members = _subGroupMembers[index] ?? [];
-    final friends = ref.read(friendsStreamProvider).valueOrNull ?? [];
+    final friends = ref.read(filteredFriendsProvider).valueOrNull ?? [];
 
     showModalBottomSheet<void>(
       context: context,
@@ -268,7 +268,7 @@ class _CommunityGroupFormScreenState
 
   @override
   Widget build(BuildContext context) {
-    final friends = ref.watch(friendsStreamProvider).valueOrNull ?? [];
+    final friends = ref.watch(filteredFriendsProvider).valueOrNull ?? [];
     final groupColor = Color(int.parse(_colorHex.replaceFirst('#', '0xFF')));
     final groupName = _nameCtrl.text.trim();
     final hasUnroled = _selectedMembers.any((m) => m.role == null);

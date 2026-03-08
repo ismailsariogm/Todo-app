@@ -146,6 +146,25 @@ class AppL10n {
       _tr ? 'Görevleriniz özel — grup oluşturmadan kimse göremez' : 'Your tasks are private — no one can see them without a group';
   String get taskPrivateBannerGroup =>
       _tr ? 'Arkadaşlarınız var — grup oluşturarak görev paylaşabilirsiniz' : 'You have friends — create a group to share tasks';
+
+  // ── Blocked users ────────────────────────────────────────────────────────
+  String get blockedUsers => _tr ? 'Engellenenler' : 'Blocked Users';
+  String get noBlockedUsers =>
+      _tr ? 'Engellenen kullanıcı yok' : 'No blocked users';
+  String get noBlockedUsersSubtitle =>
+      _tr ? 'Engellediğiniz kullanıcılar burada görünecek.' : 'Blocked users will appear here.';
+  String get blockedUsersSubtitle =>
+      _tr ? 'Engellenen kullanıcıları yönetin' : 'Manage blocked users';
+  String get unblock => _tr ? 'Engeli kaldır' : 'Unblock';
+  String get unblockSuccess =>
+      _tr ? 'Engel kaldırıldı' : 'User unblocked';
+  String get errorLoadingBlocked =>
+      _tr ? 'Engellenenler yüklenemedi' : 'Could not load blocked users';
+  String get blockUser => _tr ? 'Engelle' : 'Block';
+  String get blockConfirm =>
+      _tr ? 'Bu kullanıcıyı engellemek istiyor musunuz?' : 'Block this user?';
+  String get blockSuccess =>
+      _tr ? 'Kullanıcı engellendi' : 'User blocked';
 }
 
 final appL10nProvider = Provider<AppL10n>((ref) {

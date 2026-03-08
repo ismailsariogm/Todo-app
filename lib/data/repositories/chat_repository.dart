@@ -47,6 +47,12 @@ class ChatRepository {
     await DbClient.upsertItem('user_registry', user.toJson());
   }
 
+  /// Kayıtlı tüm kullanıcıları döndürür (engellenenler listesi vb. için).
+  Future<List<ChatUserEntity>> getRegistryUsers() async {
+    final prefs = await SharedPreferences.getInstance();
+    return _loadRegistry(prefs);
+  }
+
   /// Kod ile kullanıcı bulur (ör. "#AB3X7K").
   Future<ChatUserEntity?> findUserByCode(String code) async {
     final prefs = await SharedPreferences.getInstance();

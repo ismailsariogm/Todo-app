@@ -54,7 +54,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final friendsAsync = ref.watch(friendsStreamProvider);
+    final friendsAsync = ref.watch(filteredFriendsProvider);
 
     return Stack(
       children: [

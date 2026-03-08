@@ -18,6 +18,7 @@ import '../features/collaboration/group_form_screen.dart';
 import '../features/collaboration/group_settings_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/settings/profile_screen.dart';
+import '../features/settings/blocked_users_screen.dart';
 import '../features/auth/auth_provider.dart';
 
 // ─── Route names ──────────────────────────────────────────────────────────
@@ -38,6 +39,7 @@ abstract class AppRoutes {
   static const groupDetail = '/collab/group/detail';
   static const groupSettings = '/collab/group/settings';
   static const profileSettings = '/settings/profile';
+  static const blockedUsers = '/settings/blocked';
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -120,6 +122,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.profileSettings,
         builder: (_, __) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.blockedUsers,
+        builder: (_, __) => const BlockedUsersScreen(),
       ),
       GoRoute(
         path: AppRoutes.collab,
