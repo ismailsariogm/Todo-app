@@ -1,0 +1,18 @@
+---
+description: Todo uygulamasını her zaman veritabanı sunucusu ile çalıştır
+alwaysApply: true
+---
+
+# Uygulama Çalıştırma
+
+Bu Todo uygulamasını **her zaman** `start_app.ps1` ile başlat:
+
+```powershell
+.\start_app.ps1
+```
+
+Bu script:
+1. Veritabanı sunucusunu (port 3001) başlatır
+2. Flutter uygulamasını Chrome'da açar (port 8080)
+
+**Önemli:** Sadece `flutter run -d chrome` kullanma — veritabanı sunucusu çalışmaz ve giriş/kayıt, grup görevleri gibi özellikler düzgün çalışmaz.

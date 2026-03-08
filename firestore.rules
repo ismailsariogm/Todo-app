@@ -1,0 +1,124 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ─────────────────────────────────────────────────
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return request.auth.uid == uid;
+    }
+
+    function isProjectMember(projectId) {
+      return exists(/databases/$(database)/documents/projects/$(projectId)/members/$(request.auth.uid));
+    }
+
+    function isProjectOwner(projectId) {
+      return get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
+    }
+
+    function validTask() {
+      let d = request.resource.data;
+      return d.keys().hasAll(['id', 'ownerId', 'title', 'createdAt', 'updatedAt'])
+          && d.title is string
+          && d.title.size() > 0
+          && d.title.size() <= 500
+          && d.priority in [1, 2, 3, 4]
+          && (d.notes == null || d.notes.size() <= 10000);
+    }
+
+    // ── User personal tasks ──────────────────────────────────────────────
+
+    match /users/{userId}/tasks/{taskId} {
+      // Only the owner can read/write their personal tasks
+      allow read, write: if isSignedIn() && isOwner(userId);
+
+      allow create: if isSignedIn()
+          && isOwner(userId)
+          && validTask()
+          && request.resource.data.ownerId == request.auth.uid;
+
+      allow update: if isSignedIn()
+          && isOwner(userId)
+          && validTask()
+          // Prevent changing ownerId
+          && request.resource.data.ownerId == resource.data.ownerId
+          // last-write-wins: incoming updatedAt must be >= existing
+          && request.resource.data.updatedAt >= resource.data.updatedAt;
+
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+
+    // ── Shared projects ──────────────────────────────────────────────────
+
+    match /projects/{projectId} {
+      // Anyone can read project metadata if they are a member
+      allow read: if isSignedIn()
+          && (isProjectOwner(projectId) || isProjectMember(projectId));
+
+      // Only owner can create / update project metadata
+      allow create: if isSignedIn()
+          && request.resource.data.ownerId == request.auth.uid;
+
+      allow update: if isSignedIn() && isProjectOwner(projectId);
+      allow delete: if isSignedIn() && isProjectOwner(projectId);
+
+      // ── Project members sub-collection ────────────────────────────────
+      match /members/{memberId} {
+        // Members can read the member list
+        allow read: if isSignedIn() && isProjectMember(projectId);
+        // Only owner can add/remove members
+        allow write: if isSignedIn() && isProjectOwner(projectId);
+      }
+
+      // ── Shared tasks ──────────────────────────────────────────────────
+      match /tasks/{taskId} {
+        // Members can read all tasks in a shared project
+        allow read: if isSignedIn()
+            && (isProjectOwner(projectId) || isProjectMember(projectId));
+
+        // Members can create tasks
+        allow create: if isSignedIn()
+            && isProjectMember(projectId)
+            && validTask()
+            && request.resource.data.ownerId == request.auth.uid;
+
+        // Members can update their own tasks; owners can update any
+        allow update: if isSignedIn()
+            && (isProjectOwner(projectId)
+                || (isProjectMember(projectId)
+                    && resource.data.ownerId == request.auth.uid))
+            && validTask()
+            && request.resource.data.updatedAt >= resource.data.updatedAt;
+
+        // Only task owner or project owner can delete
+        allow delete: if isSignedIn()
+            && (isProjectOwner(projectId)
+                || resource.data.ownerId == request.auth.uid);
+
+        // ── Task comments ────────────────────────────────────────────────
+        match /comments/{commentId} {
+          allow read: if isSignedIn()
+              && (isProjectOwner(projectId) || isProjectMember(projectId));
+
+          allow create: if isSignedIn()
+              && isProjectMember(projectId)
+              && request.resource.data.userId == request.auth.uid
+              && request.resource.data.text is string
+              && request.resource.data.text.size() > 0
+              && request.resource.data.text.size() <= 2000;
+
+          // Comments are immutable after creation
+          allow update: if false;
+
+          allow delete: if isSignedIn()
+              && (isProjectOwner(projectId)
+                  || resource.data.userId == request.auth.uid);
+        }
+      }
+    }
+  }
+}
