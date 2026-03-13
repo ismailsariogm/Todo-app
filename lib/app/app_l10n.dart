@@ -19,7 +19,27 @@ class AppL10n {
   String get tabOngoing => _tr ? 'Devam' : 'Ongoing';
   String get tabCompleted => _tr ? 'Bitti' : 'Done';
   String get tabDeleted => _tr ? 'Silindi' : 'Deleted';
+  String get tabFolders => _tr ? 'Klasörlerim' : 'My Folders';
   String get tabSettings => _tr ? 'Ayarlar' : 'Settings';
+
+  // ── Folders (Klasörler) ───────────────────────────────────────────────────
+  String get addFolder => _tr ? 'Klasör Ekle' : 'Add Folder';
+  String get createFolder => _tr ? 'Yeni Klasör Oluştur' : 'Create New Folder';
+  String get folderNameHint => _tr ? 'Klasör adı' : 'Folder name';
+  String get folderNameExample =>
+      _tr ? 'örn: Market Alışverişi' : 'e.g. Grocery';
+  String get noFoldersYet =>
+      _tr ? 'Henüz klasör yok' : 'No folders yet';
+  String get noFoldersSubtitle =>
+      _tr ? 'Klasör ekleyerek görevlerinizi düzenleyin.' : 'Add folders to organize your tasks.';
+  String get foldersLoadError =>
+      _tr ? 'Klasörler yüklenemedi' : 'Could not load folders';
+  String get duplicateFolderWarning =>
+      _tr ? 'Bu isimde klasör zaten var. Lütfen "Seç" bölümünden mevcut klasörü seçin.' : 'A folder with this name already exists. Please select it from the dropdown.';
+  String folderCreated(String name) =>
+      _tr ? '"$name" klasörü oluşturuldu' : 'Folder "$name" created';
+  String get folderCreateError =>
+      _tr ? 'Klasör oluşturulamadı' : 'Could not create folder';
 
   // ── Home screen ───────────────────────────────────────────────────────────
   String get greetingMorning => _tr ? 'Günaydın' : 'Good morning';
@@ -53,6 +73,8 @@ class AppL10n {
   String completedTitle(int n) => _tr ? 'Tamamlanan ($n)' : 'Completed ($n)';
   String get completedLoading => _tr ? 'Tamamlanan' : 'Completed';
   String get noCompleted => _tr ? 'Henüz tamamlanan görev yok' : 'No completed tasks yet';
+  String get notCompletedOnTime =>
+      _tr ? 'Zamanında bitirilemedi' : 'Not completed on time';
   String get noCompletedSubtitle =>
       _tr ? 'Görevleri tamamladıkça burada görünecek.' : 'Completed tasks will appear here.';
   String get noDate => _tr ? 'Tarih yok' : 'No date';

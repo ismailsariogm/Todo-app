@@ -199,6 +199,18 @@ class _TaskDetailState extends ConsumerState<_TaskDetail> {
   String _creatorName() => _memberName(widget.task.ownerId);
   String _creatorRole() => _memberRole(widget.task.ownerId);
 
+  String _editorDisplayName(String userId) {
+    if (widget.task.projectId != null) return _memberName(userId);
+    final currentUser = ref.watch(currentUserProvider);
+    if (currentUser?.uid == userId) return 'Siz';
+    return userId;
+  }
+
+  String _editorRole(String userId) {
+    if (widget.task.projectId != null) return _memberRole(userId);
+    return '';
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -464,6 +476,16 @@ class _TaskDetailState extends ConsumerState<_TaskDetail> {
                 const SizedBox(height: 20),
                 const Divider(),
                 const SizedBox(height: 8),
+                if (task.updatedByUserId != null) ...[
+                  _UserInfoRow(
+                    icon: Icons.edit_outlined,
+                    label: 'Düzenleyen',
+                    name: _editorDisplayName(task.updatedByUserId!),
+                    role: _editorRole(task.updatedByUserId!),
+                    date: task.updatedAt,
+                  ),
+                  const SizedBox(height: 4),
+                ],
                 if (task.projectId != null) ...[
                   _UserInfoRow(
                     icon: Icons.person_add_outlined,

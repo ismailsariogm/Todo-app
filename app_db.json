@@ -15,6 +15,7 @@
       "id": "ae3d82af-3b03-4cf6-a898-f78a65bad2f8",
       "ownerId": "demo_57556110",
       "projectId": "5bd03c75-6f60-4444-bfa5-581bb20ae134",
+      "fileId": null,
       "title": "sdaas",
       "notes": null,
       "dueAt": "2026-03-18T00:49:00.000",
@@ -31,6 +32,7 @@
       "deletedByUserId": null,
       "createdAt": "2026-03-02T00:49:58.477",
       "updatedAt": "2026-03-03T21:20:55.782",
+      "updatedByUserId": null,
       "version": 2,
       "deviceId": "device_1772401798477"
     },
@@ -38,6 +40,7 @@
       "id": "10179ea1-8a2d-46f5-b873-312e58f62464",
       "ownerId": "demo_57556110",
       "projectId": "5bd03c75-6f60-4444-bfa5-581bb20ae134",
+      "fileId": null,
       "title": "sadasdasaasd",
       "notes": null,
       "dueAt": "2026-03-07T00:50:00.000",
@@ -54,6 +57,7 @@
       "deletedByUserId": null,
       "createdAt": "2026-03-02T00:50:54.569",
       "updatedAt": "2026-03-03T21:20:55.152",
+      "updatedByUserId": null,
       "version": 2,
       "deviceId": "device_1772401798477"
     },
@@ -61,6 +65,7 @@
       "id": "1d16dacc-bb52-43c7-be13-1f95056f62e1",
       "ownerId": "demo_57556110",
       "projectId": "cbc78622-986f-4e41-b5a3-3db598b55418",
+      "fileId": null,
       "title": "sadsad",
       "notes": "asdasd",
       "dueAt": "2026-03-20T05:16:00.000",
@@ -77,6 +82,7 @@
       "deletedByUserId": null,
       "createdAt": "2026-03-02T21:16:51.897",
       "updatedAt": "2026-03-02T21:16:51.897",
+      "updatedByUserId": null,
       "version": 1,
       "deviceId": "device_1772401798477"
     },
@@ -84,6 +90,7 @@
       "id": "271b6903-fbb1-4ce6-9e89-8494c153105e",
       "ownerId": "demo_57556110",
       "projectId": "1b2866d7-6af8-4de9-8c2c-0895732a0e14",
+      "fileId": null,
       "title": "sdadsa",
       "notes": "sdsadsa",
       "dueAt": null,
@@ -100,6 +107,7 @@
       "deletedByUserId": null,
       "createdAt": "2026-03-02T22:22:22.282",
       "updatedAt": "2026-03-02T22:22:50.518",
+      "updatedByUserId": null,
       "version": 2,
       "deviceId": "device_1772479342282"
     },
@@ -107,6 +115,7 @@
       "id": "7d0dd906-33e2-47ec-853e-cf8014e2f099",
       "ownerId": "demo_57556110",
       "projectId": "ed9a8eca-e33a-48e2-ad70-a048ab675d11",
+      "fileId": null,
       "title": "saddas",
       "notes": "sadsa",
       "dueAt": null,
@@ -116,20 +125,22 @@
       "labels": [],
       "isCompleted": true,
       "completedAt": "2026-03-06T20:54:01.316",
-      "isDeleted": false,
-      "deletedAt": "2026-03-06T20:57:40.521",
+      "isDeleted": true,
+      "deletedAt": "2026-03-13T22:03:05.999",
       "assigneeId": null,
       "completedByUserId": "demo_57556110",
-      "deletedByUserId": null,
+      "deletedByUserId": "demo_57556110",
       "createdAt": "2026-03-03T21:22:53.209",
-      "updatedAt": "2026-03-06T21:13:14.772",
-      "version": 12,
+      "updatedAt": "2026-03-13T22:03:05.999",
+      "updatedByUserId": null,
+      "version": 13,
       "deviceId": "device_1772401798477"
     },
     {
       "id": "16a2f5b7-f4da-4b5a-b576-be3fd8c98e31",
       "ownerId": "demo_57556110",
       "projectId": "ed9a8eca-e33a-48e2-ad70-a048ab675d11",
+      "fileId": null,
       "title": "dfdsfds",
       "notes": null,
       "dueAt": null,
@@ -140,42 +151,21 @@
       "isCompleted": true,
       "completedAt": "2026-03-03T21:53:18.196",
       "isDeleted": false,
-      "deletedAt": null,
+      "deletedAt": "2026-03-13T22:03:07.026",
       "assigneeId": null,
       "completedByUserId": "demo_57556110",
       "deletedByUserId": null,
       "createdAt": "2026-03-03T21:52:01.078",
-      "updatedAt": "2026-03-03T21:53:18.196",
-      "version": 3,
-      "deviceId": "device_1772401798477"
-    },
-    {
-      "id": "da697373-95d9-408b-8fe8-eaa5cfd51901",
-      "ownerId": "demo_57556110",
-      "projectId": null,
-      "title": "ddd",
-      "notes": "sdasdsad",
-      "dueAt": null,
-      "reminderAt": null,
-      "recurrenceRule": "none",
-      "priority": 3,
-      "labels": [],
-      "isCompleted": true,
-      "completedAt": "2026-03-08T20:10:29.052",
-      "isDeleted": true,
-      "deletedAt": "2026-03-08T20:10:39.725",
-      "assigneeId": null,
-      "completedByUserId": "demo_57556110",
-      "deletedByUserId": "demo_57556110",
-      "createdAt": "2026-03-08T20:10:24.936",
-      "updatedAt": "2026-03-08T20:10:39.725",
-      "version": 3,
+      "updatedAt": "2026-03-13T22:06:43.154",
+      "updatedByUserId": null,
+      "version": 5,
       "deviceId": "device_1772401798477"
     },
     {
       "id": "ce53c021-827d-4845-be3c-229ca3e8ee28",
       "ownerId": "demo_57556110",
       "projectId": "0f8004dc-c07f-4ee1-8588-80528f55f9f7",
+      "fileId": null,
       "title": "11",
       "notes": "dd",
       "dueAt": "2026-03-08T21:57:43.443",
@@ -192,24 +182,137 @@
       "deletedByUserId": null,
       "createdAt": "2026-03-08T21:28:24.424",
       "updatedAt": "2026-03-08T21:28:51.555",
+      "updatedByUserId": null,
       "version": 2,
+      "deviceId": "device_1772401798477"
+    },
+    {
+      "id": "b998c96c-0b47-486a-af1c-db0bc5d50583",
+      "ownerId": "demo_57556110",
+      "projectId": "ed9a8eca-e33a-48e2-ad70-a048ab675d11",
+      "fileId": null,
+      "title": "sdsad",
+      "notes": "sadsad",
+      "dueAt": "2026-03-13T22:02:23.129",
+      "reminderAt": null,
+      "recurrenceRule": "none",
+      "priority": 1,
+      "labels": [],
+      "isCompleted": true,
+      "completedAt": "2026-03-13T22:02:53.468",
+      "isDeleted": true,
+      "deletedAt": "2026-03-13T22:03:04.158",
+      "assigneeId": null,
+      "completedByUserId": "demo_57556110",
+      "deletedByUserId": "demo_57556110",
+      "createdAt": "2026-03-13T21:46:18.122",
+      "updatedAt": "2026-03-13T22:03:04.158",
+      "updatedByUserId": "demo_57556110",
+      "version": 6,
+      "deviceId": "device_1772401798477"
+    },
+    {
+      "id": "bb6940d0-4b7c-49ca-be85-8aa946380fca",
+      "ownerId": "demo_57556110",
+      "projectId": "10fbccee-ffd7-4487-bf7d-5539d06e99e3",
+      "fileId": null,
+      "title": "sad",
+      "notes": null,
+      "dueAt": "2026-03-13T22:16:29.217",
+      "reminderAt": null,
+      "recurrenceRule": "none",
+      "priority": 2,
+      "labels": [],
+      "isCompleted": true,
+      "completedAt": "2026-03-13T22:32:00.489",
+      "isDeleted": true,
+      "deletedAt": "2026-03-13T22:32:13.245",
+      "assigneeId": null,
+      "completedByUserId": "demo_57556110",
+      "deletedByUserId": "demo_57556110",
+      "createdAt": "2026-03-13T21:56:51.051",
+      "updatedAt": "2026-03-13T22:32:13.245",
+      "updatedByUserId": "demo_57556110",
+      "version": 7,
+      "deviceId": "device_1772401798477"
+    },
+    {
+      "id": "2dc3b1ed-795d-4ef5-ace9-ed4dee832dc3",
+      "ownerId": "demo_57556110",
+      "projectId": "edd79fe8-1028-44ad-833f-a9c6d0efba07",
+      "fileId": null,
+      "title": "cxzcxz",
+      "notes": null,
+      "dueAt": "2026-03-13T22:37:35.862",
+      "reminderAt": null,
+      "recurrenceRule": "none",
+      "priority": 2,
+      "labels": [],
+      "isCompleted": true,
+      "completedAt": "2026-03-13T22:37:39.964",
+      "isDeleted": true,
+      "deletedAt": "2026-03-13T22:37:52.342",
+      "assigneeId": null,
+      "completedByUserId": "demo_57556110",
+      "deletedByUserId": "demo_57556110",
+      "createdAt": "2026-03-13T22:05:59.428",
+      "updatedAt": "2026-03-13T22:37:52.342",
+      "updatedByUserId": "demo_57556110",
+      "version": 5,
+      "deviceId": "device_1772401798477"
+    },
+    {
+      "id": "896cc7d4-80f5-4ef8-9f0f-b9de76d91394",
+      "ownerId": "demo_57556110",
+      "projectId": "edd79fe8-1028-44ad-833f-a9c6d0efba07",
+      "fileId": "e3b4caf9-5052-423e-ab02-f5f5eeb19220",
+      "title": "xcxzc",
+      "notes": "xzczxc",
+      "dueAt": null,
+      "reminderAt": null,
+      "recurrenceRule": "none",
+      "priority": 4,
+      "labels": [],
+      "isCompleted": false,
+      "completedAt": null,
+      "isDeleted": false,
+      "deletedAt": null,
+      "assigneeId": null,
+      "completedByUserId": null,
+      "deletedByUserId": null,
+      "createdAt": "2026-03-13T22:06:53.008",
+      "updatedAt": "2026-03-13T22:06:53.008",
+      "updatedByUserId": null,
+      "version": 1,
+      "deviceId": "device_1772401798477"
+    },
+    {
+      "id": "7e8c72ea-45c8-4dd6-97fe-a1d9bd47809e",
+      "ownerId": "demo_57556110",
+      "projectId": "0f8004dc-c07f-4ee1-8588-80528f55f9f7",
+      "fileId": null,
+      "title": "asdasdsa",
+      "notes": null,
+      "dueAt": "2026-03-21T22:36:00.000",
+      "reminderAt": null,
+      "recurrenceRule": "none",
+      "priority": 1,
+      "labels": [],
+      "isCompleted": false,
+      "completedAt": null,
+      "isDeleted": false,
+      "deletedAt": null,
+      "assigneeId": null,
+      "completedByUserId": null,
+      "deletedByUserId": null,
+      "createdAt": "2026-03-13T22:35:19.341",
+      "updatedAt": "2026-03-13T22:35:19.341",
+      "updatedByUserId": null,
+      "version": 1,
       "deviceId": "device_1772401798477"
     }
   ],
   "projects": [
-    {
-      "id": "ed9a8eca-e33a-48e2-ad70-a048ab675d11",
-      "ownerId": "demo_57556110",
-      "name": "dedem",
-      "description": null,
-      "isShared": true,
-      "colorHex": "#6366F1",
-      "photoBase64": null,
-      "createdAt": "2026-03-03T21:21:30.615",
-      "updatedAt": "2026-03-06T21:54:11.926",
-      "isCommunityGroup": false,
-      "parentCommunityId": null
-    },
     {
       "id": "10fbccee-ffd7-4487-bf7d-5539d06e99e3",
       "ownerId": "demo_57556110",
@@ -294,10 +397,10 @@
       "name": "deneme",
       "description": null,
       "isShared": true,
-      "colorHex": "#6366F1",
+      "colorHex": "#EF4444",
       "photoBase64": null,
       "createdAt": "2026-03-08T21:20:20.402",
-      "updatedAt": "2026-03-08T21:20:20.402",
+      "updatedAt": "2026-03-13T20:22:27.504",
       "isCommunityGroup": true,
       "parentCommunityId": null
     },
@@ -354,36 +457,12 @@
       "joinedAt": "2026-03-02T20:46:30.284"
     },
     {
-      "groupId": "ed9a8eca-e33a-48e2-ad70-a048ab675d11",
-      "userId": "demo_57556110",
-      "email": "ismailsariogm@gmail.com",
-      "displayName": "ismail1274",
-      "role": "yonetici",
-      "joinedAt": "2026-03-03T21:21:30.655"
-    },
-    {
       "groupId": "10fbccee-ffd7-4487-bf7d-5539d06e99e3",
       "userId": "demo_57556110",
       "email": "ismailsariogm@gmail.com",
       "displayName": "ismail1274",
       "role": "yonetici",
       "joinedAt": "2026-03-06T21:16:53.563"
-    },
-    {
-      "groupId": "ed9a8eca-e33a-48e2-ad70-a048ab675d11",
-      "userId": "demo_friend_elif",
-      "email": "elif.demir@demo.com",
-      "displayName": "Elif Demir",
-      "role": "uye",
-      "joinedAt": "2026-03-06T21:54:09.103"
-    },
-    {
-      "groupId": "ed9a8eca-e33a-48e2-ad70-a048ab675d11",
-      "userId": "demo_friend_mert",
-      "email": "mert.kaya@demo.com",
-      "displayName": "Mert Kaya",
-      "role": "kıdemli",
-      "joinedAt": "2026-03-06T21:54:10.872"
     },
     {
       "groupId": "49ee0b18-145e-4a0f-bb0b-a253d18ceb23",
@@ -577,7 +656,7 @@
       "email": "ismailsariogm@gmail.com",
       "userCode": "#AARP4X",
       "avatarColorHex": "#10B981",
-      "createdAt": "2026-03-08T20:21:37.871"
+      "createdAt": "2026-03-13T22:17:38.479"
     },
     {
       "uid": "demo_friend_zeynep",
@@ -741,6 +820,30 @@
         "isDeleted": false,
         "deletedForUserIds": []
       }
+    ],
+    "group_proj_edd79fe8-1028-44ad-833f-a9c6d0efba07": [
+      {
+        "id": "b79b9201-ab71-4e02-9042-faff0f2f6901",
+        "conversationId": "group_proj_edd79fe8-1028-44ad-833f-a9c6d0efba07",
+        "senderId": "__system_settings__",
+        "senderName": "Grup Ayarları",
+        "content": "Grup bilgilerini (ad/renk) güncelleyen - ismail1274 (Yönetici)",
+        "sentAt": "2026-03-13T20:22:14.112",
+        "isRead": false,
+        "isDeleted": false,
+        "deletedForUserIds": []
+      },
+      {
+        "id": "de1e9106-f6b9-4b63-aec8-600e6fe8d65e",
+        "conversationId": "group_proj_edd79fe8-1028-44ad-833f-a9c6d0efba07",
+        "senderId": "__system_settings__",
+        "senderName": "Grup Ayarları",
+        "content": "Grup bilgilerini (ad/renk) güncelleyen - ismail1274 (Yönetici)",
+        "sentAt": "2026-03-13T20:22:27.538",
+        "isRead": false,
+        "isDeleted": false,
+        "deletedForUserIds": []
+      }
     ]
   },
   "task_views": [
@@ -750,7 +853,7 @@
       "userId": "demo_57556110",
       "userDisplayName": "ismail1274",
       "userRole": "Yönetici",
-      "viewedAt": "2026-03-06T20:55:54.547"
+      "viewedAt": "2026-03-13T22:03:18.953"
     },
     {
       "id": "7d0dd906-33e2-47ec-853e-cf8014e2f099_demo_57556110",
@@ -758,7 +861,7 @@
       "userId": "demo_57556110",
       "userDisplayName": "ismail1274",
       "userRole": "Yönetici",
-      "viewedAt": "2026-03-06T21:13:51.584"
+      "viewedAt": "2026-03-13T22:03:29.672"
     },
     {
       "id": "ce53c021-827d-4845-be3c-229ca3e8ee28_demo_57556110",
@@ -767,6 +870,30 @@
       "userDisplayName": "ismail1274",
       "userRole": "Yönetici",
       "viewedAt": "2026-03-08T21:28:39.164"
+    },
+    {
+      "id": "b998c96c-0b47-486a-af1c-db0bc5d50583_demo_57556110",
+      "taskId": "b998c96c-0b47-486a-af1c-db0bc5d50583",
+      "userId": "demo_57556110",
+      "userDisplayName": "ismail1274",
+      "userRole": "Yönetici",
+      "viewedAt": "2026-03-13T22:02:51.212"
+    },
+    {
+      "id": "bb6940d0-4b7c-49ca-be85-8aa946380fca_demo_57556110",
+      "taskId": "bb6940d0-4b7c-49ca-be85-8aa946380fca",
+      "userId": "demo_57556110",
+      "userDisplayName": "ismail1274",
+      "userRole": "Yönetici",
+      "viewedAt": "2026-03-13T22:31:56.358"
+    },
+    {
+      "id": "2dc3b1ed-795d-4ef5-ace9-ed4dee832dc3_demo_57556110",
+      "taskId": "2dc3b1ed-795d-4ef5-ace9-ed4dee832dc3",
+      "userId": "demo_57556110",
+      "userDisplayName": "ismail1274",
+      "userRole": "Yönetici",
+      "viewedAt": "2026-03-13T22:36:27.353"
     }
   ],
   "subtasks": [
@@ -839,6 +966,278 @@
       "createdAt": "2026-03-08T21:28:24.472",
       "completedByUserId": "demo_57556110",
       "completedAt": "2026-03-08T21:28:47.659"
+    },
+    {
+      "id": "8e6b5ae3-812c-41a0-9446-8f10ab49737d_sub_0",
+      "taskId": "8e6b5ae3-812c-41a0-9446-8f10ab49737d",
+      "title": "al",
+      "isCompleted": true,
+      "sortOrder": 0,
+      "createdAt": "2026-03-13T21:03:39.991",
+      "completedByUserId": "demo_57556110",
+      "completedAt": "2026-03-13T21:05:49.445"
+    },
+    {
+      "id": "40db3c5f-13b6-4ae5-ae51-623ac2a1d0ed",
+      "taskId": "8e6b5ae3-812c-41a0-9446-8f10ab49737d",
+      "title": "ffd",
+      "isCompleted": true,
+      "sortOrder": 1,
+      "createdAt": "2026-03-13T21:06:03.711",
+      "completedByUserId": "demo_57556110",
+      "completedAt": "2026-03-13T21:06:16.287"
+    },
+    {
+      "id": "c8819c04-631e-43aa-81ae-a7db14a9738e",
+      "taskId": "8e6b5ae3-812c-41a0-9446-8f10ab49737d",
+      "title": "fdsf",
+      "isCompleted": true,
+      "sortOrder": 2,
+      "createdAt": "2026-03-13T21:06:07.435",
+      "completedByUserId": "demo_57556110",
+      "completedAt": "2026-03-13T21:06:16.717"
+    },
+    {
+      "id": "ba5eb5ef-59f3-4acc-a5c4-456bb1af47ce_sub_0",
+      "taskId": "ba5eb5ef-59f3-4acc-a5c4-456bb1af47ce",
+      "title": "sdad",
+      "isCompleted": true,
+      "sortOrder": 0,
+      "createdAt": "2026-03-13T21:24:46.650",
+      "completedByUserId": "demo_57556110",
+      "completedAt": "2026-03-13T21:37:26.389"
+    },
+    {
+      "id": "ba5eb5ef-59f3-4acc-a5c4-456bb1af47ce_sub_1",
+      "taskId": "ba5eb5ef-59f3-4acc-a5c4-456bb1af47ce",
+      "title": "dsadsad",
+      "isCompleted": true,
+      "sortOrder": 1,
+      "createdAt": "2026-03-13T21:24:46.650",
+      "completedByUserId": "demo_57556110",
+      "completedAt": "2026-03-13T21:37:26.786"
+    },
+    {
+      "id": "ba5eb5ef-59f3-4acc-a5c4-456bb1af47ce_sub_2",
+      "taskId": "ba5eb5ef-59f3-4acc-a5c4-456bb1af47ce",
+      "title": "asdasd",
+      "isCompleted": true,
+      "sortOrder": 2,
+      "createdAt": "2026-03-13T21:24:46.650",
+      "completedByUserId": "demo_57556110",
+      "completedAt": "2026-03-13T21:37:27.240"
+    },
+    {
+      "id": "18b23923-33ca-457e-8e20-8d3287938216_sub_0",
+      "taskId": "18b23923-33ca-457e-8e20-8d3287938216",
+      "title": "aa",
+      "isCompleted": true,
+      "sortOrder": 0,
+      "createdAt": "2026-03-13T21:42:44.556",
+      "completedByUserId": "demo_57556110",
+      "completedAt": "2026-03-13T21:44:36.931"
+    },
+    {
+      "id": "18b23923-33ca-457e-8e20-8d3287938216_sub_1",
+      "taskId": "18b23923-33ca-457e-8e20-8d3287938216",
+      "title": "bb",
+      "isCompleted": true,
+      "sortOrder": 1,
+      "createdAt": "2026-03-13T21:42:44.556",
+      "completedByUserId": "demo_57556110",
+      "completedAt": "2026-03-13T21:44:37.320"
+    },
+    {
+      "id": "18b23923-33ca-457e-8e20-8d3287938216_sub_2",
+      "taskId": "18b23923-33ca-457e-8e20-8d3287938216",
+      "title": "cc",
+      "isCompleted": true,
+      "sortOrder": 2,
+      "createdAt": "2026-03-13T21:42:44.556",
+      "completedByUserId": "demo_57556110",
+      "completedAt": "2026-03-13T21:44:37.888"
+    },
+    {
+      "id": "b998c96c-0b47-486a-af1c-db0bc5d50583_sub_0",
+      "taskId": "b998c96c-0b47-486a-af1c-db0bc5d50583",
+      "title": "dsad",
+      "isCompleted": true,
+      "sortOrder": 0,
+      "createdAt": "2026-03-13T21:46:18.169",
+      "completedByUserId": "demo_57556110",
+      "completedAt": "2026-03-13T22:02:44.920"
+    },
+    {
+      "id": "b998c96c-0b47-486a-af1c-db0bc5d50583_sub_1",
+      "taskId": "b998c96c-0b47-486a-af1c-db0bc5d50583",
+      "title": "sdadas",
+      "isCompleted": true,
+      "sortOrder": 1,
+      "createdAt": "2026-03-13T21:46:18.169",
+      "completedByUserId": "demo_57556110",
+      "completedAt": "2026-03-13T22:02:45.283"
+    },
+    {
+      "id": "a3f07795-a0ed-43ed-a215-9f17aed83508_sub_0",
+      "taskId": "a3f07795-a0ed-43ed-a215-9f17aed83508",
+      "title": "sadsad",
+      "isCompleted": false,
+      "sortOrder": 0,
+      "createdAt": "2026-03-13T22:10:35.392"
+    },
+    {
+      "id": "a3f07795-a0ed-43ed-a215-9f17aed83508_sub_1",
+      "taskId": "a3f07795-a0ed-43ed-a215-9f17aed83508",
+      "title": "sads",
+      "isCompleted": false,
+      "sortOrder": 1,
+      "createdAt": "2026-03-13T22:10:35.392"
+    },
+    {
+      "id": "b2fb82da-5726-49e3-90c5-a6f7d8cf2d04_sub_0",
+      "taskId": "b2fb82da-5726-49e3-90c5-a6f7d8cf2d04",
+      "title": "sas",
+      "isCompleted": true,
+      "sortOrder": 0,
+      "createdAt": "2026-03-13T22:14:16.853",
+      "completedByUserId": "demo_57556110",
+      "completedAt": "2026-03-13T22:20:33.762"
+    },
+    {
+      "id": "b2fb82da-5726-49e3-90c5-a6f7d8cf2d04_sub_2",
+      "taskId": "b2fb82da-5726-49e3-90c5-a6f7d8cf2d04",
+      "title": "asas",
+      "isCompleted": true,
+      "sortOrder": 1,
+      "createdAt": "2026-03-13T22:14:16.853",
+      "completedByUserId": "demo_57556110",
+      "completedAt": "2026-03-13T22:20:34.075"
+    },
+    {
+      "id": "b2fb82da-5726-49e3-90c5-a6f7d8cf2d04_sub_2",
+      "taskId": "b2fb82da-5726-49e3-90c5-a6f7d8cf2d04",
+      "title": "asas",
+      "isCompleted": true,
+      "sortOrder": 2,
+      "createdAt": "2026-03-13T22:14:16.853",
+      "completedByUserId": "demo_57556110",
+      "completedAt": "2026-03-13T22:20:34.075"
+    },
+    {
+      "id": "b2fb82da-5726-49e3-90c5-a6f7d8cf2d04_sub_3",
+      "taskId": "b2fb82da-5726-49e3-90c5-a6f7d8cf2d04",
+      "title": "asa",
+      "isCompleted": true,
+      "sortOrder": 3,
+      "createdAt": "2026-03-13T22:14:45.232",
+      "completedByUserId": "demo_57556110",
+      "completedAt": "2026-03-13T22:20:35.533"
+    },
+    {
+      "id": "575b14f3-503b-4677-bb1c-8fa737169aab_sub_0",
+      "taskId": "575b14f3-503b-4677-bb1c-8fa737169aab",
+      "title": "sadasd",
+      "isCompleted": true,
+      "sortOrder": 0,
+      "createdAt": "2026-03-13T22:24:04.019",
+      "completedByUserId": "demo_57556110",
+      "completedAt": "2026-03-13T22:30:55.640"
+    },
+    {
+      "id": "575b14f3-503b-4677-bb1c-8fa737169aab_sub_1",
+      "taskId": "575b14f3-503b-4677-bb1c-8fa737169aab",
+      "title": "sdasd",
+      "isCompleted": true,
+      "sortOrder": 1,
+      "createdAt": "2026-03-13T22:24:04.019",
+      "completedByUserId": "demo_57556110",
+      "completedAt": "2026-03-13T22:30:56.048"
+    },
+    {
+      "id": "bb6940d0-4b7c-49ca-be85-8aa946380fca_sub_0",
+      "taskId": "bb6940d0-4b7c-49ca-be85-8aa946380fca",
+      "title": "zxcxz",
+      "isCompleted": true,
+      "sortOrder": 0,
+      "createdAt": "2026-03-13T22:16:18.134",
+      "completedByUserId": "demo_57556110",
+      "completedAt": "2026-03-13T22:16:30.848"
+    },
+    {
+      "id": "bb6940d0-4b7c-49ca-be85-8aa946380fca_sub_1",
+      "taskId": "bb6940d0-4b7c-49ca-be85-8aa946380fca",
+      "title": "xzcxzc",
+      "isCompleted": true,
+      "sortOrder": 1,
+      "createdAt": "2026-03-13T22:16:18.134",
+      "completedByUserId": "demo_57556110",
+      "completedAt": "2026-03-13T22:16:31.159"
+    },
+    {
+      "id": "bb6940d0-4b7c-49ca-be85-8aa946380fca_sub_2",
+      "taskId": "bb6940d0-4b7c-49ca-be85-8aa946380fca",
+      "title": "xzcxzc",
+      "isCompleted": true,
+      "sortOrder": 2,
+      "createdAt": "2026-03-13T22:16:18.134",
+      "completedByUserId": "demo_57556110",
+      "completedAt": "2026-03-13T22:16:31.633"
+    },
+    {
+      "id": "bb6940d0-4b7c-49ca-be85-8aa946380fca_sub_3",
+      "taskId": "bb6940d0-4b7c-49ca-be85-8aa946380fca",
+      "title": "xzcxzcxz",
+      "isCompleted": true,
+      "sortOrder": 3,
+      "createdAt": "2026-03-13T22:16:18.134",
+      "completedByUserId": "demo_57556110",
+      "completedAt": "2026-03-13T22:16:32.042"
+    },
+    {
+      "id": "bb6940d0-4b7c-49ca-be85-8aa946380fca_sub_4",
+      "taskId": "bb6940d0-4b7c-49ca-be85-8aa946380fca",
+      "title": "zxczxc",
+      "isCompleted": true,
+      "sortOrder": 4,
+      "createdAt": "2026-03-13T22:16:18.134",
+      "completedByUserId": "demo_57556110",
+      "completedAt": "2026-03-13T22:31:58.054"
+    },
+    {
+      "id": "bb6940d0-4b7c-49ca-be85-8aa946380fca_sub_5",
+      "taskId": "bb6940d0-4b7c-49ca-be85-8aa946380fca",
+      "title": "zxczxc",
+      "isCompleted": true,
+      "sortOrder": 5,
+      "createdAt": "2026-03-13T22:16:18.134",
+      "completedByUserId": "demo_57556110",
+      "completedAt": "2026-03-13T22:31:58.314"
+    }
+  ],
+  "task_files": [
+    {
+      "id": "e3b4caf9-5052-423e-ab02-f5f5eeb19220",
+      "ownerId": "demo_57556110",
+      "name": "Alışveriş",
+      "colorHex": "#6366F1",
+      "sortOrder": 0,
+      "createdAt": "2026-03-13T20:52:51.266"
+    },
+    {
+      "id": "57f3001f-62bc-4adf-b22e-b1928858f778",
+      "ownerId": "demo_57556110",
+      "name": "alışveriş",
+      "colorHex": "#6366F1",
+      "sortOrder": 1,
+      "createdAt": "2026-03-13T21:02:57.431"
+    },
+    {
+      "id": "be58dd93-62e2-4b95-b77b-a55fa18f2d29",
+      "ownerId": "demo_57556110",
+      "name": "mazot",
+      "colorHex": "#6366F1",
+      "sortOrder": 2,
+      "createdAt": "2026-03-13T22:10:10.923"
     }
   ]
 }

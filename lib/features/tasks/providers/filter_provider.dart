@@ -32,6 +32,9 @@ class TaskFilterNotifier extends StateNotifier<TaskFilter> {
   void setProject(String? id) =>
       state = state.copyWith(projectId: id, clearProject: id == null);
 
+  void setFile(String? id) =>
+      state = state.copyWith(fileId: id, clearFileId: id == null);
+
   void setStatus(StatusFilter s) =>
       state = state.copyWith(statusFilter: s);
 

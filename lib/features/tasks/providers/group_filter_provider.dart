@@ -9,6 +9,7 @@ class GroupTaskFilter {
   final DateTime? dueDateTo;
   final List<String> creatorUserIds;
   final List<int> priorities;
+  final String? fileId;
 
   const GroupTaskFilter({
     this.searchQuery = '',
@@ -20,6 +21,7 @@ class GroupTaskFilter {
     this.dueDateTo,
     this.creatorUserIds = const [],
     this.priorities = const [],
+    this.fileId,
   });
 
   bool get hasActiveFilters =>
@@ -31,7 +33,8 @@ class GroupTaskFilter {
       dueDateFrom != null ||
       dueDateTo != null ||
       creatorUserIds.isNotEmpty ||
-      priorities.isNotEmpty;
+      priorities.isNotEmpty ||
+      fileId != null;
 
   GroupTaskFilter copyWith({
     String? searchQuery,
@@ -43,6 +46,7 @@ class GroupTaskFilter {
     DateTime? dueDateTo,
     List<String>? creatorUserIds,
     List<int>? priorities,
+    String? fileId,
     bool clearCreatedDateFrom = false,
     bool clearCreatedDateTo = false,
     bool clearCreatedTimeFrom = false,
@@ -51,6 +55,7 @@ class GroupTaskFilter {
     bool clearDueDateTo = false,
     bool clearCreatorUserIds = false,
     bool clearPriorities = false,
+    bool clearFileId = false,
   }) =>
       GroupTaskFilter(
         searchQuery: searchQuery ?? this.searchQuery,
@@ -62,6 +67,7 @@ class GroupTaskFilter {
         dueDateTo: clearDueDateTo ? null : (dueDateTo ?? this.dueDateTo),
         creatorUserIds: clearCreatorUserIds ? [] : (creatorUserIds ?? this.creatorUserIds),
         priorities: clearPriorities ? [] : (priorities ?? this.priorities),
+        fileId: clearFileId ? null : (fileId ?? this.fileId),
       );
 
   GroupTaskFilter reset() => const GroupTaskFilter();

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +7,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/app_l10n.dart';
 import '../../../app/theme.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../domain/entities/project_entity.dart' show GroupMemberEntity;
@@ -112,28 +115,21 @@ class TaskCard extends ConsumerWidget {
       child: InkWell(
         onTap: () => context.push('/task/${task.id}'),
         borderRadius: BorderRadius.circular(16),
-        child: Builder(builder: (context) {
-          final isDark = Theme.of(context).brightness == Brightness.dark;
-          return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            // Açık mod: beyaz kart | Koyu mod: koyu cam kart
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.08)
-                : Colors.white.withValues(alpha: 0.90),
-            borderRadius: BorderRadius.circular(16),
-            border: Border(
-              left: BorderSide(color: priorityColor, width: 4),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.08),
-                blurRadius: 10,
-                offset: const Offset(0, 3),
+        child: _NeonTaskCardInner(
+          task: task,
+          childBuilder: (context, decoration) {
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.white.withValues(alpha: 0.90),
+                borderRadius: BorderRadius.circular(16),
+                border: decoration.border,
+                boxShadow: decoration.boxShadow,
               ),
-            ],
-          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -189,6 +185,10 @@ class TaskCard extends ConsumerWidget {
                       ),
                     ],
                     _SubtaskPreview(taskId: task.id),
+                    if (task.isCompleted && task.isCompletedLate) ...[
+                      const SizedBox(height: 6),
+                      _LateCompletedBadge(),
+                    ],
                     const SizedBox(height: 8),
                     // ── Meta row ───────────────────────────────────
                     Wrap(
@@ -253,7 +253,34 @@ class TaskCard extends ConsumerWidget {
                               date: task.deletedAt,
                             ),
                           ],
+                          if (task.updatedByUserId != null) ...[
+                            const SizedBox(width: 4),
+                            _UserMetaChip(
+                              icon: Icons.edit_outlined,
+                              label: _memberName(task.updatedByUserId!),
+                              role: _memberRole(task.updatedByUserId!),
+                              date: task.updatedAt,
+                            ),
+                          ],
                         ],
+                      ),
+                    ],
+                    if (groupId == null &&
+                        task.updatedByUserId != null) ...[
+                      const SizedBox(height: 8),
+                      _UserMetaChip(
+                        icon: Icons.edit_outlined,
+                        label: () {
+                          final user = ref.watch(currentUserProvider);
+                          if (user?.uid == task.updatedByUserId) {
+                            return user?.displayName?.isNotEmpty == true
+                                ? user!.displayName!
+                                : 'Siz';
+                          }
+                          return 'Kullanıcı';
+                        }(),
+                        role: '',
+                        date: task.updatedAt,
                       ),
                     ],
                   ],
@@ -285,7 +312,8 @@ class TaskCard extends ConsumerWidget {
             ],
           ),
         );
-        }),
+          },
+        ),
       ),
     );
   }
@@ -360,6 +388,256 @@ class TaskCard extends ConsumerWidget {
     await repo.restoreTask(task.id);
     AutoSyncService.instance.flush();
     onRestore?.call();
+  }
+}
+
+// ── Neon border decoration (blue: ongoing, red blink: expired, green: completed, red: deleted) ─
+
+class _NeonDecoration {
+  const _NeonDecoration({required this.border, required this.boxShadow});
+  final Border border;
+  final List<BoxShadow> boxShadow;
+}
+
+class _NeonTaskCardInner extends StatefulWidget {
+  const _NeonTaskCardInner({
+    required this.task,
+    required this.childBuilder,
+  });
+
+  final TaskEntity task;
+  final Widget Function(BuildContext context, _NeonDecoration decoration) childBuilder;
+
+  @override
+  State<_NeonTaskCardInner> createState() => _NeonTaskCardInnerState();
+}
+
+class _NeonTaskCardInnerState extends State<_NeonTaskCardInner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _blinkController;
+  late final Animation<double> _blinkAnimation;
+  Timer? _overdueCheckTimer;
+
+  bool get _needsBlink =>
+      widget.task.isOverdue && !widget.task.isCompleted && !widget.task.isDeleted;
+
+  bool get _couldBecomeOverdue =>
+      widget.task.dueAt != null &&
+      !widget.task.isCompleted &&
+      !widget.task.isDeleted;
+
+  @override
+  void initState() {
+    super.initState();
+    _blinkController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _blinkAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _blinkController, curve: Curves.easeInOut),
+    );
+    if (_needsBlink) {
+      // Süresi dolmuş — kırmızı yanıp sönmeyi başlat (Ortak Grup + Topluluk Grubu)
+      _blinkController.repeat(reverse: true);
+      // TabBarView içindeyken ilk frame'de hazır olmayabilir; yedek başlatma
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted &&
+            widget.task.isOverdue &&
+            !widget.task.isCompleted &&
+            !widget.task.isDeleted &&
+            !_blinkController.isAnimating) {
+          _blinkController.repeat(reverse: true);
+        }
+      });
+    } else if (_couldBecomeOverdue) {
+      // Süresi henüz dolmadı — 1 sn'de bir kontrol et, dolunca yanıp sönsün
+      void checkOverdue() {
+        if (!mounted) return;
+        if (widget.task.isOverdue &&
+            !widget.task.isCompleted &&
+            !widget.task.isDeleted) {
+          _overdueCheckTimer?.cancel();
+          _overdueCheckTimer = null;
+          if (!_blinkController.isAnimating) {
+            _blinkController.repeat(reverse: true);
+          }
+          setState(() {});
+        }
+      }
+      checkOverdue(); // Hemen ilk kontrol (TabBarView için)
+      _overdueCheckTimer = Timer.periodic(
+        const Duration(seconds: 1),
+        (_) => checkOverdue(),
+      );
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _NeonTaskCardInner oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_needsBlink) {
+      _overdueCheckTimer?.cancel();
+      _overdueCheckTimer = null;
+      if (!_blinkController.isAnimating) {
+        _blinkController.repeat(reverse: true);
+      }
+    } else if (!_needsBlink && _blinkController.isAnimating) {
+      _blinkController.stop();
+      _blinkController.reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _overdueCheckTimer?.cancel();
+    _blinkController.dispose();
+    super.dispose();
+  }
+
+  static const _blueNeon = Color(0xFF00BFFF);   // Devam eden (sabit mavi)
+  static const _redNeon = Color(0xFFFF1744);     // Süresi dolmuş / Silinmiş (kırmızı)
+  static const _greenNeon = Color(0xFF00E676);  // Tamamlanmış (sabit yeşil)
+
+  _NeonDecoration _buildDecoration() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final baseShadow = BoxShadow(
+      color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.08),
+      blurRadius: 10,
+      offset: const Offset(0, 3),
+    );
+
+    if (widget.task.isDeleted) {
+      return _NeonDecoration(
+        border: Border.all(color: _redNeon, width: 3),
+        boxShadow: [
+          baseShadow,
+          BoxShadow(
+            color: _redNeon.withValues(alpha: 0.7),
+            blurRadius: 14,
+            spreadRadius: 0,
+          ),
+        ],
+      );
+    }
+    if (widget.task.isCompleted) {
+      return _NeonDecoration(
+        border: Border.all(color: _greenNeon, width: 3),
+        boxShadow: [
+          baseShadow,
+          BoxShadow(
+            color: _greenNeon.withValues(alpha: 0.6),
+            blurRadius: 14,
+            spreadRadius: 0,
+          ),
+        ],
+      );
+    }
+    if (widget.task.isOverdue) {
+      final opacity = _needsBlink ? _blinkAnimation.value : 1.0;
+      return _NeonDecoration(
+        border: Border.all(
+          color: _redNeon.withValues(alpha: opacity),
+          width: 3,
+        ),
+        boxShadow: [
+          baseShadow,
+          BoxShadow(
+            color: _redNeon.withValues(alpha: 0.5 * opacity),
+            blurRadius: 14,
+            spreadRadius: 0,
+          ),
+        ],
+      );
+    }
+    return _NeonDecoration(
+      border: Border.all(color: _blueNeon, width: 3),
+      boxShadow: [
+        baseShadow,
+        BoxShadow(
+          color: _blueNeon.withValues(alpha: 0.5),
+          blurRadius: 14,
+          spreadRadius: 0,
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_needsBlink) {
+      return AnimatedBuilder(
+        animation: _blinkAnimation,
+        builder: (context, _) {
+          final decoration = _buildDecoration();
+          return widget.childBuilder(context, decoration);
+        },
+      );
+    }
+    final decoration = _buildDecoration();
+    return widget.childBuilder(context, decoration);
+  }
+}
+
+/// Turuncu çarpı ikonu ve "zamanında bitirilemedi" metni — yavaş yanıp söner.
+class _LateCompletedBadge extends ConsumerStatefulWidget {
+  const _LateCompletedBadge();
+
+  @override
+  ConsumerState<_LateCompletedBadge> createState() => _LateCompletedBadgeState();
+}
+
+class _LateCompletedBadgeState extends ConsumerState<_LateCompletedBadge>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _blinkCtrl;
+  late final Animation<double> _blinkAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _blinkCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _blinkAnim = Tween<double>(begin: 0.35, end: 1.0).animate(
+      CurvedAnimation(parent: _blinkCtrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _blinkCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = ref.watch(appL10nProvider);
+    return AnimatedBuilder(
+      animation: _blinkAnim,
+      builder: (context, _) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.close_rounded,
+              size: 18,
+              color: const Color(0xFFFF9800)
+                  .withValues(alpha: _blinkAnim.value),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              l.notCompletedOnTime,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFFFF9800)
+                    .withValues(alpha: _blinkAnim.value),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
 
@@ -445,7 +723,7 @@ class _UserMetaChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final color = cs.onSurface.withOpacity(0.6);
+    final color = cs.onSurface.withValues(alpha: 0.6);
     final dateStr = date != null
         ? DateFormat('d MMM yyyy, HH:mm', 'tr_TR').format(date!)
         : '';
@@ -465,10 +743,17 @@ class _UserMetaChip extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
+                color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(role, style: TextStyle(fontSize: 9, color: color)),
+            ),
+          ],
+          if (dateStr.isNotEmpty) ...[
+            const SizedBox(width: 4),
+            Text(
+              dateStr,
+              style: TextStyle(fontSize: 10, color: color),
             ),
           ],
         ],

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/theme.dart';
 import '../../../domain/entities/filter_entity.dart';
 import '../providers/filter_provider.dart';
+import '../providers/tasks_provider.dart';
 import 'filter_bottom_sheet.dart';
 
 /// Filter chip bar.
@@ -17,6 +18,7 @@ class FilterBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final filter = ref.watch(taskFilterProvider);
+    final filesAsync = ref.watch(taskFilesProvider);
 
     return SizedBox(
       height: 42,
@@ -70,6 +72,47 @@ class FilterBar extends ConsumerWidget {
                 },
               ),
             ),
+
+          // Klasör filtreleri — ana ekranda kolay erişim
+          filesAsync.when(
+            data: (files) {
+              if (files.isEmpty) return const SizedBox.shrink();
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _Divider(pinkTheme: pinkTheme),
+                  const SizedBox(width: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: _AnimChip(
+                      label: 'Tümü',
+                      isActive: filter.fileId == null,
+                      pinkTheme: pinkTheme,
+                      onTap: () =>
+                          ref.read(taskFilterProvider.notifier).setFile(null),
+                    ),
+                  ),
+                  ...files.map(
+                    (f) => Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: _AnimChip(
+                        label: f.name,
+                        isActive: filter.fileId == f.id,
+                        pinkTheme: pinkTheme,
+                        onTap: () {
+                          ref.read(taskFilterProvider.notifier).setFile(
+                                filter.fileId == f.id ? null : f.id,
+                              );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
 
           if (filter.hasActiveFilters) ...[
             const SizedBox(width: 4),

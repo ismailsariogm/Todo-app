@@ -12,10 +12,13 @@ import '../../services/auto_sync_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/subtask_storage.dart';
 import '../auth/auth_provider.dart';
-import '../tasks/widgets/home_background.dart';
+import 'widgets/create_folder_dialog.dart';
+import 'widgets/home_background.dart';
+import 'package:todo_note/app/app_l10n.dart';
+
 import 'providers/tasks_provider.dart'
     show projectsProvider, allSharedProjectsForUserProvider,
-        groupTasksProvider, subtasksProvider;
+        groupTasksProvider, subtasksProvider, taskFilesProvider;
 
 class TaskFormScreen extends ConsumerStatefulWidget {
   const TaskFormScreen({super.key, this.taskId, this.groupId});
@@ -39,6 +42,7 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
   String _recurrence = 'none';
   List<String> _labels = [];
   String? _projectId;
+  String? _fileId;
   bool _loading = false;
   bool _isEdit = false;
   TaskEntity? _original;
@@ -73,6 +77,7 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
         _recurrence = task.recurrenceRule;
         _labels = List.from(task.labels);
         _projectId = task.projectId;
+        _fileId = task.fileId;
         _subtasks.clear();
         _subtasks.addAll(subs.map((s) => s.title));
       });
@@ -390,7 +395,7 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
             ),
             const SizedBox(height: 12),
 
-            // ── Project ─────────────────────────────────────────────
+            // ── Project (grup görevleri için) ─────────────────────────────
             if (projectsForDropdown.isNotEmpty || widget.groupId != null)
               _FormSection(
                 children: [
@@ -406,6 +411,12 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
                         setState(() => _projectId = v!.isEmpty ? null : v),
                   ),
                 ],
+              ),
+
+            // ── Klasörlerim (kişisel ve grup görevleri için kategorileme) ───
+            _FolderSection(
+                fileId: _fileId,
+                onFileChanged: (id) => setState(() => _fileId = id),
               ),
 
             const SizedBox(height: 12),
@@ -509,52 +520,68 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
 
   Future<void> _pickDueDate() async {
     final now = DateTime.now();
+    final minDue = now.add(const Duration(minutes: 1));
+    final initialDate = _dueAt != null && _dueAt!.isAfter(minDue)
+        ? _dueAt!
+        : minDue;
     final date = await showDatePicker(
       context: context,
-      initialDate: _dueAt ?? now,
-      firstDate: now,
+      initialDate: initialDate,
+      firstDate: DateTime(now.year, now.month, now.day),
       lastDate: now.add(const Duration(days: 365 * 5)),
     );
     if (date == null || !mounted) return;
+    final initialTime = _dueAt != null && _dueAt!.isAfter(minDue)
+        ? TimeOfDay.fromDateTime(_dueAt!)
+        : TimeOfDay.fromDateTime(minDue);
     final time = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.fromDateTime(_dueAt ?? now),
+      initialTime: initialTime,
     );
     if (!mounted) return;
     var due = DateTime(
       date.year,
       date.month,
       date.day,
-      time?.hour ?? 23,
-      time?.minute ?? 59,
+      time?.hour ?? minDue.hour,
+      time?.minute ?? minDue.minute,
     );
-    if (due.isBefore(now)) due = now.add(const Duration(minutes: 30));
+    if (due.isBefore(minDue)) due = minDue;
     setState(() => _dueAt = due);
   }
 
   Future<void> _pickReminder() async {
     final now = DateTime.now();
+    final minRem = now.add(const Duration(minutes: 1));
+    final initialDate = (_reminderAt != null && _reminderAt!.isAfter(minRem))
+        ? _reminderAt!
+        : (_dueAt != null && _dueAt!.isAfter(minRem))
+            ? _dueAt!
+            : minRem;
     final date = await showDatePicker(
       context: context,
-      initialDate: _reminderAt ?? _dueAt ?? now,
-      firstDate: now,
+      initialDate: initialDate,
+      firstDate: DateTime(now.year, now.month, now.day),
       lastDate: now.add(const Duration(days: 365 * 5)),
     );
     if (date == null || !mounted) return;
+    final initialTime = (_reminderAt != null && _reminderAt!.isAfter(minRem))
+        ? TimeOfDay.fromDateTime(_reminderAt!)
+        : TimeOfDay.fromDateTime(minRem);
     final time = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.fromDateTime(_reminderAt ?? now),
+      initialTime: initialTime,
     );
     if (!mounted) return;
-    setState(() {
-      _reminderAt = DateTime(
-        date.year,
-        date.month,
-        date.day,
-        time?.hour ?? 9,
-        time?.minute ?? 0,
-      );
-    });
+    var rem = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time?.hour ?? minRem.hour,
+      time?.minute ?? minRem.minute,
+    );
+    if (rem.isBefore(minRem)) rem = minRem;
+    setState(() => _reminderAt = rem);
   }
 
   Future<void> _save() async {
@@ -578,6 +605,7 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
 
       TaskEntity task;
       if (_isEdit && _original != null) {
+        final userId = user.uid;
         task = _original!.copyWith(
           title: title,
           notes: _notesCtrl.text.trim().isEmpty
@@ -591,7 +619,10 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
           priority: _priority,
           labels: _labels,
           projectId: _projectId,
+          fileId: _fileId,
+          clearFileId: _fileId == null,
           updatedAt: DateTime.now(),
+          updatedByUserId: userId,
         );
         await repo.updateTask(task);
         final existing = await loadSubtasks(task.id);
@@ -622,6 +653,7 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
           priority: _priority,
           labels: _labels,
           projectId: _projectId,
+          fileId: _fileId,
           deviceId: deviceId,
         );
       }
@@ -682,6 +714,103 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
 }
 
 // ─── Form UI helpers ──────────────────────────────────────────────────────
+
+class _FolderSection extends ConsumerWidget {
+  const _FolderSection({
+    required this.fileId,
+    required this.onFileChanged,
+  });
+
+  final String? fileId;
+  final ValueChanged<String?> onFileChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final filesAsync = ref.watch(taskFilesProvider);
+    final user = ref.watch(currentUserProvider);
+    final cs = Theme.of(context).colorScheme;
+    final l = ref.watch(appL10nProvider);
+
+    return _FormSection(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.folder_special_outlined,
+                    size: 20,
+                    color: cs.onSurface.withValues(alpha: 0.7),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    l.tabFolders,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: user != null
+                        ? () => showCreateFolderDialog(context, ref,
+                            onFolderCreated: onFileChanged)
+                        : null,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: Text(l.addFolder),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              filesAsync.when(
+                loading: () => const SizedBox(
+                  height: 40,
+                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                ),
+                error: (_, __) => Text(
+                  l.foldersLoadError,
+                  style: TextStyle(color: cs.error),
+                ),
+                data: (files) {
+                  final items = <String, String>{
+                    '': 'Seç',
+                    ...{for (final f in files) f.id: f.name},
+                  };
+                  final currentValue = fileId ?? '';
+                  return DropdownButtonFormField<String>(
+                    value: items.containsKey(currentValue)
+                        ? currentValue
+                        : '',
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                    ),
+                    items: items.entries
+                        .map(
+                          (e) => DropdownMenuItem(
+                            value: e.key,
+                            child: Text(e.value),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) =>
+                        onFileChanged(v == null || v.isEmpty ? null : v),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+}
 
 class _FormSection extends StatelessWidget {
   const _FormSection({required this.children});

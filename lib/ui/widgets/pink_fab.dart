@@ -2,19 +2,20 @@ import 'package:flutter/material.dart';
 
 /// Shared gradient FAB used across all screens.
 /// [pulse] = true adds a repeating ring animation (for home screen).
+/// [label] = null veya boş ise sadece + ikonu gösterilir.
 class PinkFab extends StatefulWidget {
   const PinkFab({
     super.key,
     required this.onTap,
     required this.heroTag,
     this.pulse = false,
-    this.label = 'Görev Ekle',
+    this.label,
   });
 
   final VoidCallback onTap;
   final String heroTag;
   final bool pulse;
-  final String label;
+  final String? label;
 
   @override
   State<PinkFab> createState() => _PinkFabState();
@@ -75,10 +76,12 @@ class _PinkFabState extends State<PinkFab> with SingleTickerProviderStateMixin {
                         child: Opacity(
                           opacity: _opacityAnim.value,
                           child: Container(
-                            width: 148,
-                            height: 52,
+                            width: widget.label != null && widget.label!.isNotEmpty ? 148 : 56,
+                            height: widget.label != null && widget.label!.isNotEmpty ? 52 : 56,
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(26),
+                              borderRadius: BorderRadius.circular(
+                                widget.label != null && widget.label!.isNotEmpty ? 26 : 28,
+                              ),
                               border: Border.all(color: Colors.white, width: 2),
                             ),
                           ),
@@ -90,6 +93,7 @@ class _PinkFabState extends State<PinkFab> with SingleTickerProviderStateMixin {
               );
             },
             child: Container(
+              width: widget.label != null && widget.label!.isNotEmpty ? null : 50,
               height: 50,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
@@ -107,21 +111,27 @@ class _PinkFabState extends State<PinkFab> with SingleTickerProviderStateMixin {
                 ],
               ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.add, color: Colors.white, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      widget.label,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+                padding: EdgeInsets.symmetric(
+                  horizontal: widget.label != null && widget.label!.isNotEmpty ? 20 : 0,
+                ),
+                child: Center(
+                  child: widget.label != null && widget.label!.isNotEmpty
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.add, color: Colors.white, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              widget.label!,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        )
+                      : const Icon(Icons.add, color: Colors.white, size: 24),
                 ),
               ),
             ),

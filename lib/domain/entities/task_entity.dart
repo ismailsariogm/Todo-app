@@ -3,6 +3,7 @@ class TaskEntity {
   final String id;
   final String ownerId;
   final String? projectId;
+  final String? fileId; /// Kişisel görev dosyası (örn: Market, Gelir Gider)
   final String title;
   final String? notes;
   final DateTime? dueAt;
@@ -19,6 +20,7 @@ class TaskEntity {
   final String? deletedByUserId;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? updatedByUserId;
   final int version;
   final String deviceId;
 
@@ -26,6 +28,7 @@ class TaskEntity {
     required this.id,
     required this.ownerId,
     this.projectId,
+    this.fileId,
     required this.title,
     this.notes,
     this.dueAt,
@@ -42,6 +45,7 @@ class TaskEntity {
     this.deletedByUserId,
     required this.createdAt,
     required this.updatedAt,
+    this.updatedByUserId,
     this.version = 1,
     required this.deviceId,
   });
@@ -49,6 +53,12 @@ class TaskEntity {
   bool get isOverdue {
     if (dueAt == null || isCompleted || isDeleted) return false;
     return dueAt!.isBefore(DateTime.now());
+  }
+
+  /// Görev süresi dolduktan sonra tamamlandıysa true (zamanında bitirilemedi).
+  bool get isCompletedLate {
+    if (!isCompleted || dueAt == null || completedAt == null) return false;
+    return completedAt!.isAfter(dueAt!);
   }
 
   bool get isDueToday {
@@ -82,18 +92,23 @@ class TaskEntity {
     bool? isDeleted,
     DateTime? deletedAt,
     String? projectId,
+    String? fileId,
+    bool clearFileId = false,
     String? assigneeId,
     String? completedByUserId,
     String? deletedByUserId,
     bool clearCompletedBy = false,
     bool clearDeletedBy = false,
     DateTime? updatedAt,
+    String? updatedByUserId,
+    bool clearUpdatedBy = false,
     int? version,
   }) {
     return TaskEntity(
       id: id,
       ownerId: ownerId,
       projectId: projectId ?? this.projectId,
+      fileId: clearFileId ? null : (fileId ?? this.fileId),
       title: title ?? this.title,
       notes: notes ?? this.notes,
       dueAt: clearDueAt ? null : (dueAt ?? this.dueAt),
@@ -115,6 +130,7 @@ class TaskEntity {
           : (deletedByUserId ?? this.deletedByUserId),
       createdAt: createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
+      updatedByUserId: clearUpdatedBy ? null : (updatedByUserId ?? this.updatedByUserId),
       version: version ?? (this.version + 1),
       deviceId: deviceId,
     );
@@ -124,6 +140,7 @@ class TaskEntity {
     'id': id,
     'ownerId': ownerId,
     'projectId': projectId,
+    'fileId': fileId,
     'title': title,
     'notes': notes,
     'dueAt': dueAt?.toIso8601String(),
@@ -140,6 +157,7 @@ class TaskEntity {
     'deletedByUserId': deletedByUserId,
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
+    'updatedByUserId': updatedByUserId,
     'version': version,
     'deviceId': deviceId,
   };
@@ -148,6 +166,7 @@ class TaskEntity {
     id: m['id'] as String,
     ownerId: m['ownerId'] as String,
     projectId: m['projectId'] as String?,
+    fileId: m['fileId'] as String?,
     title: m['title'] as String,
     notes: m['notes'] as String?,
     dueAt: m['dueAt'] != null ? DateTime.parse(m['dueAt'] as String) : null,
@@ -170,6 +189,7 @@ class TaskEntity {
     deletedByUserId: m['deletedByUserId'] as String?,
     createdAt: DateTime.parse(m['createdAt'] as String),
     updatedAt: DateTime.parse(m['updatedAt'] as String),
+    updatedByUserId: m['updatedByUserId'] as String?,
     version: (m['version'] as int?) ?? 1,
     deviceId: (m['deviceId'] as String?) ?? '',
   );

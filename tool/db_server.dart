@@ -43,6 +43,7 @@ Map<String, dynamic> _readDb() {
     'messages': <String, dynamic>{},
     'task_views': <dynamic>[],
     'subtasks': <dynamic>[],
+    'task_files': <dynamic>[],
   };
 
   try {

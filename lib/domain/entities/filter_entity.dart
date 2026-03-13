@@ -10,6 +10,7 @@ class TaskFilter {
   final int? priority; // null = all
   final List<String> labels;
   final String? projectId;
+  final String? fileId; /// Kişisel görev dosyası filtresi
   final String searchQuery;
 
   const TaskFilter({
@@ -18,6 +19,7 @@ class TaskFilter {
     this.priority,
     this.labels = const [],
     this.projectId,
+    this.fileId,
     this.searchQuery = '',
   });
 
@@ -26,6 +28,7 @@ class TaskFilter {
       priority != null ||
       labels.isNotEmpty ||
       projectId != null ||
+      fileId != null ||
       searchQuery.isNotEmpty;
 
   TaskFilter copyWith({
@@ -36,6 +39,8 @@ class TaskFilter {
     List<String>? labels,
     String? projectId,
     bool clearProject = false,
+    String? fileId,
+    bool clearFileId = false,
     String? searchQuery,
   }) {
     return TaskFilter(
@@ -44,6 +49,7 @@ class TaskFilter {
       priority: clearPriority ? null : (priority ?? this.priority),
       labels: labels ?? this.labels,
       projectId: clearProject ? null : (projectId ?? this.projectId),
+      fileId: clearFileId ? null : (fileId ?? this.fileId),
       searchQuery: searchQuery ?? this.searchQuery,
     );
   }
@@ -56,6 +62,7 @@ class TaskFilter {
     'priority': priority,
     'labels': labels,
     'projectId': projectId,
+    'fileId': fileId,
     'searchQuery': searchQuery,
   };
 
@@ -73,6 +80,7 @@ class TaskFilter {
     priority: m['priority'] as int?,
     labels: (m['labels'] as List<dynamic>?)?.cast<String>() ?? [],
     projectId: m['projectId'] as String?,
+    fileId: m['fileId'] as String?,
     searchQuery: (m['searchQuery'] as String?) ?? '',
   );
 

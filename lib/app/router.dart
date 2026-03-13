@@ -8,6 +8,7 @@ import '../features/tasks/home_screen.dart';
 import '../features/tasks/active_screen.dart';
 import '../features/tasks/completed_screen.dart';
 import '../features/tasks/trash_screen.dart';
+import '../features/tasks/folders_screen.dart';
 import '../features/tasks/task_form_screen.dart';
 import '../features/tasks/task_detail_screen.dart';
 import '../features/collaboration/collaboration_screen.dart';
@@ -29,6 +30,7 @@ abstract class AppRoutes {
   static const active = '/active';
   static const completed = '/completed';
   static const trash = '/trash';
+  static const folders = '/folders';
   static const settings = '/settings';
   static const taskForm = '/task/form';
   static const taskDetail = '/task/:id';
@@ -96,6 +98,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: AppRoutes.trash,
             pageBuilder: (_, state) =>
                 _fadeTransition(state, const TrashScreen()),
+          ),
+          GoRoute(
+            path: AppRoutes.folders,
+            pageBuilder: (_, state) =>
+                _fadeTransition(state, const FoldersScreen()),
           ),
           GoRoute(
             path: AppRoutes.settings,

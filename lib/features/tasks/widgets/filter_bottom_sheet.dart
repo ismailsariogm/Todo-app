@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/theme.dart';
 import '../../../domain/entities/filter_entity.dart';
 import '../providers/filter_provider.dart';
+import '../../../domain/entities/task_file_entity.dart';
 import '../providers/tasks_provider.dart';
 import '../../../data/repositories/project_repository.dart';
 import '../../auth/auth_provider.dart';
@@ -35,6 +36,7 @@ class _FilterBottomSheetState extends ConsumerState<FilterBottomSheet> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final projects = ref.watch(projectsProvider).valueOrNull ?? [];
+    final filesAsync = ref.watch(taskFilesProvider);
 
     return DraggableScrollableSheet(
       initialChildSize: 0.75,
@@ -175,6 +177,48 @@ class _FilterBottomSheetState extends ConsumerState<FilterBottomSheet> {
                   ),
                   const SizedBox(height: 20),
                 ],
+
+                // ── Klasör (kişisel görev kategorileri) ───────────
+                filesAsync.when(
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
+                  data: (files) {
+                    if (files.isEmpty) return const SizedBox.shrink();
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _SectionLabel('Klasör'),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            ChoiceChip(
+                              label: const Text('Tümü'),
+                              selected: _local.fileId == null,
+                              onSelected: (_) => setState(
+                                () => _local =
+                                    _local.copyWith(clearFileId: true),
+                              ),
+                            ),
+                            ...files.map(
+                              (f) => ChoiceChip(
+                                label: Text(f.name),
+                                selected: _local.fileId == f.id,
+                                onSelected: (_) => setState(
+                                  () => _local = _local.copyWith(
+                                    fileId: _local.fileId == f.id ? null : f.id,
+                                    clearFileId: _local.fileId == f.id,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                    );
+                  },
+                ),
 
                 // ── Save filter ──────────────────────────────────
                 _SectionLabel('Filtreri Kaydet'),

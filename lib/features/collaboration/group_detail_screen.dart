@@ -13,7 +13,7 @@ import 'package:todo_note/data/repositories/task_repository.dart'
 import 'package:todo_note/features/tasks/providers/tasks_provider.dart'
     show GroupTaskTab, groupAllTasksCountProvider, groupMembersProvider,
         groupTaskTabProvider, groupSearchQueryProvider, groupTasksProvider,
-        sharedGroupsProvider, groupTaskFilterProvider;
+        sharedGroupsProvider, groupTaskFilterProvider, taskFilesProvider;
 import 'package:todo_note/features/tasks/providers/group_filter_provider.dart';
 import 'package:todo_note/app/theme.dart' show PriorityColor;
 import 'package:todo_note/features/tasks/widgets/home_background.dart';
@@ -890,6 +890,41 @@ class _TasksTabState extends ConsumerState<_TasksTab> {
                   ],
                 ),
                 const SizedBox(height: 12),
+                const Text('Klasör', style: TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w600,
+                )),
+                const SizedBox(height: 4),
+                Consumer(
+                  builder: (ctx, ref, _) {
+                    final filesAsync = ref.watch(taskFilesProvider);
+                    return filesAsync.when(
+                      data: (files) {
+                        if (files.isEmpty) return const SizedBox.shrink();
+                        return Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            FilterChip(
+                              label: const Text('Tümü'),
+                              selected: local.fileId == null,
+                              onSelected: (_) => setModalState(() =>
+                                  local = local.copyWith(clearFileId: true)),
+                            ),
+                            ...files.map((f) => FilterChip(
+                              label: Text(f.name),
+                              selected: local.fileId == f.id,
+                              onSelected: (_) => setModalState(() =>
+                                  local = local.copyWith(fileId: f.id)),
+                            )),
+                          ],
+                        );
+                      },
+                      loading: () => const SizedBox(height: 32),
+                      error: (_, __) => const SizedBox.shrink(),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
                 const Text('Oluşturan kullanıcılar', style: TextStyle(
                   fontSize: 12, fontWeight: FontWeight.w600,
                 )),
@@ -1014,6 +1049,9 @@ class _TasksTabState extends ConsumerState<_TasksTab> {
             !filter.creatorUserIds.contains(t.ownerId)) return false;
         if (filter.priorities.isNotEmpty &&
             !filter.priorities.contains(t.priority)) return false;
+        if (filter.fileId != null) {
+          if (t.fileId != filter.fileId) return false;
+        }
         return true;
       }).toList();
     }
@@ -1263,7 +1301,6 @@ class _TasksTabState extends ConsumerState<_TasksTab> {
             bottom: 16,
             child: PinkFab(
               heroTag: 'fab_group_${widget.groupId}',
-              label: 'Görev Ekle',
               onTap: () => context.push(
                 '${AppRoutes.taskForm}?groupId=${widget.groupId}',
               ),

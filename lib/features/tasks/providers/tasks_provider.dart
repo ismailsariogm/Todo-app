@@ -7,7 +7,9 @@ import '../../../domain/entities/subtask_entity.dart';
 import '../../../domain/entities/project_entity.dart';
 import '../../../domain/entities/project_entity.dart' show GroupMemberEntity;
 import '../../../features/auth/auth_provider.dart';
+import '../../../domain/entities/task_file_entity.dart';
 import '../../../services/subtask_storage.dart';
+import '../../../services/task_file_storage.dart';
 import 'filter_provider.dart';
 import 'group_filter_provider.dart';
 
@@ -98,6 +100,13 @@ class RecentSearchesNotifier extends StateNotifier<List<String>> {
 
   void clear() => state = [];
 }
+
+// ─── Task files (kişisel dosya/kategoriler) ───────────────────────────────
+final taskFilesProvider = FutureProvider<List<TaskFileEntity>>((ref) async {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return [];
+  return TaskFileStorage.instance.getFiles(user.uid);
+});
 
 // ─── Projects (owned) ─────────────────────────────────────────────────────
 final projectsProvider = StreamProvider<List<ProjectEntity>>((ref) {

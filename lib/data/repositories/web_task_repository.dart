@@ -32,6 +32,7 @@ abstract class BaseTaskRepository {
     required String ownerId,
     required String title,
     String? projectId,
+    String? fileId,
     String? notes,
     DateTime? dueAt,
     DateTime? reminderAt,
@@ -212,6 +213,7 @@ class WebTaskRepository extends BaseTaskRepository {
           return false;
         }
       }
+      if (filter.fileId != null && t.fileId != filter.fileId) return false;
       final now = DateTime.now();
       switch (filter.dateFilter) {
         case DateFilter.today:
@@ -315,6 +317,7 @@ class WebTaskRepository extends BaseTaskRepository {
     required String ownerId,
     required String title,
     String? projectId,
+    String? fileId,
     String? notes,
     DateTime? dueAt,
     DateTime? reminderAt,
@@ -329,6 +332,7 @@ class WebTaskRepository extends BaseTaskRepository {
       id: _uuid.v4(),
       ownerId: ownerId,
       projectId: projectId,
+      fileId: fileId,
       title: title,
       notes: notes,
       dueAt: dueAt,
