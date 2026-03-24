@@ -23,6 +23,13 @@ import 'providers/tasks_provider.dart'
 
 const _uuid = Uuid();
 
+String _firstCharUpper(String s) {
+  if (s.isEmpty) return '?';
+  final it = s.runes.iterator;
+  if (!it.moveNext()) return '?';
+  return String.fromCharCode(it.current).toUpperCase();
+}
+
 // ─── Comments (local) ──────────────────────────────────────────────────────
 String _commentsKey(String taskId) => 'comments_$taskId';
 
@@ -150,7 +157,8 @@ class _TaskDetailState extends ConsumerState<_TaskDetail> {
     await recordTaskView(TaskViewRecord(
       taskId: widget.task.id,
       userId: user.uid,
-      userDisplayName: user.displayName ?? 'Kullanıcı',
+      userDisplayName:
+          user.displayName.isEmpty ? 'Kullanıcı' : user.displayName,
       userRole: role,
       viewedAt: DateTime.now(),
     ));
@@ -430,9 +438,9 @@ class _TaskDetailState extends ConsumerState<_TaskDetail> {
                 ),
                 const SizedBox(height: 20),
 
-                // ── Comments ──────────────────────────────────────
+                // ── Yorum yapanlar (metinler sadece tıklanınca panelde) ──
                 _MetaSection(
-                  title: 'Yorumlar',
+                  title: 'Yorum yapanlar',
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -443,9 +451,10 @@ class _TaskDetailState extends ConsumerState<_TaskDetail> {
                               style: Theme.of(context).textTheme.bodySmall),
                         )
                       else
-                        ..._comments
-                            .map((c) => _CommentItem(comment: c))
-                            .toList(),
+                        _CommentAuthorsStrip(
+                          comments: _comments,
+                          onUserTap: _openUserCommentsPanel,
+                        ),
                       const SizedBox(height: 8),
                       if (!task.isDeleted)
                         Row(
@@ -733,7 +742,8 @@ class _TaskDetailState extends ConsumerState<_TaskDetail> {
       id: _uuid.v4(),
       taskId: widget.task.id,
       userId: user.uid,
-      userDisplayName: user.displayName ?? 'Kullanıcı',
+      userDisplayName:
+          user.displayName.isEmpty ? 'Kullanıcı' : user.displayName,
       body: text,
       createdAt: DateTime.now(),
     );
@@ -741,6 +751,105 @@ class _TaskDetailState extends ConsumerState<_TaskDetail> {
     await _saveComments(widget.task.id, updated);
     _commentCtrl.clear();
     if (mounted) setState(() => _comments = updated);
+  }
+
+  void _openUserCommentsPanel(String userId, String displayName) {
+    final list = _comments.where((c) => c.userId == userId).toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    if (list.isEmpty) return;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        final maxH = MediaQuery.sizeOf(ctx).height * 0.55;
+        return SafeArea(
+          child: SizedBox(
+            height: maxH,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 26,
+                        backgroundColor: cs.primaryContainer,
+                        child: Text(
+                          displayName.isNotEmpty
+                              ? _firstCharUpper(displayName)
+                              : '?',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            color: cs.onPrimaryContainer,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              displayName,
+                              style: Theme.of(ctx).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                            Text(
+                              '${list.length} yorum',
+                              style: Theme.of(ctx).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Divider(height: 1, color: cs.outline.withValues(alpha: 0.2)),
+                Expanded(
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    itemCount: list.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (_, i) {
+                      final c = list[i];
+                      return Material(
+                        color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                DateFormat('d MMM yyyy, HH:mm', 'tr_TR')
+                                    .format(c.createdAt),
+                                style: Theme.of(ctx).textTheme.labelSmall
+                                    ?.copyWith(
+                                  color: cs.onSurface.withValues(alpha: 0.55),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                c.body,
+                                style: Theme.of(ctx).textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -899,54 +1008,75 @@ class _UserInfoRow extends StatelessWidget {
   }
 }
 
-class _CommentItem extends StatelessWidget {
-  const _CommentItem({required this.comment});
+/// Yorum yapan benzersiz kullanıcılar — tıklanınca o kullanıcının yorumları açılır.
+class _CommentAuthorsStrip extends StatelessWidget {
+  const _CommentAuthorsStrip({
+    required this.comments,
+    required this.onUserTap,
+  });
 
-  final CommentEntity comment;
+  final List<CommentEntity> comments;
+  final void Function(String userId, String displayName) onUserTap;
 
   @override
   Widget build(BuildContext context) {
+    final seen = <String>{};
+    final authors = <CommentEntity>[];
+    for (final c in comments) {
+      if (seen.add(c.userId)) {
+        authors.add(c);
+      }
+    }
+    if (authors.isEmpty) return const SizedBox.shrink();
     final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: cs.primaryContainer,
-            child: Text(
-              comment.userDisplayName.isNotEmpty
-                  ? comment.userDisplayName[0].toUpperCase()
-                  : '?',
-              style: TextStyle(color: cs.onPrimaryContainer, fontSize: 13),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      comment.userDisplayName,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 13),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      DateFormat('d MMM, HH:mm', 'tr_TR')
-                          .format(comment.createdAt),
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
+          for (final c in authors)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: InkWell(
+                onTap: () => onUserTap(c.userId, c.userDisplayName),
+                borderRadius: BorderRadius.circular(28),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircleAvatar(
+                        radius: 22,
+                        backgroundColor: cs.primaryContainer,
+                        child: Text(
+                          c.userDisplayName.isNotEmpty
+                              ? _firstCharUpper(c.userDisplayName)
+                              : '?',
+                          style: TextStyle(
+                            color: cs.onPrimaryContainer,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 76),
+                        child: Text(
+                          c.userDisplayName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 4),
-                Text(comment.body),
-              ],
+              ),
             ),
-          ),
         ],
       ),
     );

@@ -17,8 +17,7 @@ import 'widgets/home_background.dart';
 import 'package:todo_note/app/app_l10n.dart';
 
 import 'providers/tasks_provider.dart'
-    show projectsProvider, allSharedProjectsForUserProvider,
-        groupTasksProvider, subtasksProvider, taskFilesProvider;
+    show groupTasksProvider, subtasksProvider, taskFilesProvider;
 
 class TaskFormScreen extends ConsumerStatefulWidget {
   const TaskFormScreen({super.key, this.taskId, this.groupId});
@@ -96,10 +95,6 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final projects = ref.watch(projectsProvider).valueOrNull ?? [];
-    final allShared = ref.watch(allSharedProjectsForUserProvider).valueOrNull ?? [];
-    // Grup bağlamında açıldıysa tüm grupları göster (normal + topluluk + alt grup); yoksa sadece sahip olunanları
-    final projectsForDropdown = widget.groupId != null ? allShared : projects;
 
     return Stack(
       children: [
@@ -394,24 +389,6 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
               ],
             ),
             const SizedBox(height: 12),
-
-            // ── Project (grup görevleri için) ─────────────────────────────
-            if (projectsForDropdown.isNotEmpty || widget.groupId != null)
-              _FormSection(
-                children: [
-                  _DropdownTile(
-                    icon: Icons.folder_outlined,
-                    label: 'Proje / Liste',
-                    value: _projectId ?? '',
-                    items: {
-                      '': 'Kişisel',
-                      ...{for (final p in projectsForDropdown) p.id: p.name},
-                    },
-                    onChanged: (v) =>
-                        setState(() => _projectId = v!.isEmpty ? null : v),
-                  ),
-                ],
-              ),
 
             // ── Klasörlerim (kişisel ve grup görevleri için kategorileme) ───
             _FolderSection(

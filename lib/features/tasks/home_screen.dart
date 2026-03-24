@@ -8,9 +8,12 @@ import 'package:todo_note/app/router.dart';
 import 'package:todo_note/features/auth/auth_provider.dart';
 import 'package:todo_note/features/chat/chat_provider.dart';
 import 'package:todo_note/features/collaboration/group_badge_widget.dart';
+import 'package:todo_note/domain/entities/filter_entity.dart';
+import 'package:todo_note/features/tasks/providers/filter_provider.dart';
 import 'package:todo_note/features/tasks/providers/tasks_provider.dart';
 import 'package:todo_note/features/tasks/widgets/task_card.dart';
 import 'package:todo_note/features/tasks/widgets/filter_bar.dart';
+import 'package:todo_note/features/tasks/widgets/task_progress_dual_section.dart';
 import 'package:todo_note/ui/widgets/empty_state_widget.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -33,8 +36,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
-    ref.watch(todayTasksProvider); // keeps today's task list alive for stats
-    final stats = ref.watch(todayStatsProvider);
+    final progressSnapshot = ref.watch(homeTaskProgressProvider);
+    final dateFilter = ref.watch(taskFilterProvider).dateFilter;
     final searchResults = ref.watch(searchResultsProvider);
     final allTasks = ref.watch(filteredTasksProvider);
     final l = ref.watch(appL10nProvider);
@@ -184,11 +187,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
 
-            // ── Progress card (with shimmer) ─────────────────────────
+            // ── Bugün VEYA Devam eden ilerleme (tarih filtresine göre ayrı) ─
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: _ProgressCard(stats: stats, l10n: l),
+                child: dateFilter == DateFilter.today
+                    ? TaskProgressTodaySection(snapshot: progressSnapshot)
+                    : TaskProgressOngoingSection(snapshot: progressSnapshot),
               ),
             ),
 
@@ -401,160 +406,6 @@ class _PrivacyBanner extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-// ── Progress card with shimmer ──────────────────────────────────────────────
-// SwiftUI: ProgressCard with animated gradient glow + sliding shimmer strip
-
-class _ProgressCard extends StatefulWidget {
-  const _ProgressCard({required this.stats, required this.l10n});
-
-  final ({int total, int done}) stats;
-  final AppL10n l10n;
-
-  @override
-  State<_ProgressCard> createState() => _ProgressCardState();
-}
-
-class _ProgressCardState extends State<_ProgressCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _shimmerCtrl;
-
-  @override
-  void initState() {
-    super.initState();
-    // SwiftUI: .animation(.easeInOut(duration:1.8).repeatForever(autoreverses:false))
-    _shimmerCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1800),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _shimmerCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final progress = widget.stats.total == 0
-        ? 0.0
-        : widget.stats.done / widget.stats.total;
-
-    return AnimatedBuilder(
-      animation: _shimmerCtrl,
-      builder: (_, __) {
-        final shimX = (_shimmerCtrl.value * 1.6 - 0.3);
-
-        return Stack(
-          children: [
-            // Main gradient card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF6B2FD9), Color(0xFFCF4DA6)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.18),
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF8B40F0).withValues(alpha: 0.40),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.l10n.todayProgress,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.85),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            widget.l10n.completed(widget.stats.done, widget.stats.total),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Spacer(),
-                      Text(
-                        '${(progress * 100).round()}%',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  // Progress bar
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(5),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      minHeight: 10,
-                      backgroundColor: Colors.white.withValues(alpha: 0.20),
-                      valueColor:
-                          const AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Shimmer strip (SwiftUI sliding RoundedRectangle shimmer)
-            Positioned.fill(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(22),
-                child: OverflowBox(
-                  maxWidth: double.infinity,
-                  alignment: Alignment.centerLeft,
-                  child: Transform.translate(
-                    offset: Offset(shimX * 380, 0),
-                    child: Container(
-                      width: 80,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.transparent,
-                            Colors.white.withValues(alpha: 0.22),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
     );
   }
 }

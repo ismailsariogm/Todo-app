@@ -13,11 +13,14 @@ import 'package:todo_note/data/repositories/task_repository.dart'
 import 'package:todo_note/features/tasks/providers/tasks_provider.dart'
     show GroupTaskTab, groupAllTasksCountProvider, groupMembersProvider,
         groupTaskTabProvider, groupSearchQueryProvider, groupTasksProvider,
-        sharedGroupsProvider, groupTaskFilterProvider, taskFilesProvider;
+        sharedGroupsProvider, groupTaskFilterProvider, groupTaskProgressProvider,
+        taskFilesProvider;
 import 'package:todo_note/features/tasks/providers/group_filter_provider.dart';
 import 'package:todo_note/app/theme.dart' show PriorityColor;
 import 'package:todo_note/features/tasks/widgets/home_background.dart';
 import 'package:todo_note/features/tasks/widgets/task_card.dart';
+import 'package:todo_note/features/tasks/widgets/task_progress_dual_section.dart'
+    show TaskProgressTodaySection, TaskProgressOngoingSection;
 import 'package:todo_note/features/chat/widgets/chat_attach_sheet.dart';
 import 'package:todo_note/features/chat/widgets/message_content_widget.dart';
 import 'package:todo_note/features/collaboration/group_badge_widget.dart'
@@ -1007,6 +1010,7 @@ class _TasksTabState extends ConsumerState<_TasksTab> {
     final isOwner = group?.ownerId == user?.uid;
     final canAdd = GroupPermissions.canAddTask(myRole) || isOwner;
     final canComplete = GroupPermissions.canCompleteTask(myRole) || isOwner;
+    final groupProgress = ref.watch(groupTaskProgressProvider(widget.groupId));
 
     var tasks = tasksAsync.valueOrNull ?? [];
     final filter = ref.watch(groupTaskFilterProvider(widget.groupId));
@@ -1104,6 +1108,21 @@ class _TasksTabState extends ConsumerState<_TasksTab> {
                   ),
                 ),
               ),
+            ),
+
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              child: switch (currentTab) {
+                GroupTaskTab.today => TaskProgressTodaySection(
+                    snapshot: groupProgress,
+                    compact: true,
+                  ),
+                GroupTaskTab.active => TaskProgressOngoingSection(
+                    snapshot: groupProgress,
+                    compact: true,
+                  ),
+                _ => const SizedBox.shrink(),
+              },
             ),
 
             // ── Filtrele + Filter tabs ─────────────────────────────────────

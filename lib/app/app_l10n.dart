@@ -35,7 +35,9 @@ class AppL10n {
   String get foldersLoadError =>
       _tr ? 'Klasörler yüklenemedi' : 'Could not load folders';
   String get duplicateFolderWarning =>
-      _tr ? 'Bu isimde klasör zaten var. Lütfen "Seç" bölümünden mevcut klasörü seçin.' : 'A folder with this name already exists. Please select it from the dropdown.';
+      _tr
+          ? 'Aynı isimde klasör oluşturulamaz (büyük/küçük harf, ı/i, u/ü, o/ö veya noktalama farkı olsa da).'
+          : 'A folder with the same name cannot be created (case, Turkish letters, or punctuation differences are ignored).';
   String folderCreated(String name) =>
       _tr ? '"$name" klasörü oluşturuldu' : 'Folder "$name" created';
   String get folderCreateError =>

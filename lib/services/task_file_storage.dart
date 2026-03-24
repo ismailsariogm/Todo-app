@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import '../domain/entities/task_file_entity.dart';
+import '../utils/folder_name_normalize.dart';
 import 'db_client.dart';
 
 const _kKey = 'task_files_v1';
@@ -58,6 +59,9 @@ class TaskFileStorage {
     required String name,
     String? colorHex,
   }) async {
+    if (await hasFolderWithName(ownerId, name)) {
+      throw StateError('duplicate_folder');
+    }
     final all = await _loadAll();
     final existing = all.where((f) => f.ownerId == ownerId).length;
     final file = TaskFileEntity(
@@ -90,11 +94,13 @@ class TaskFileStorage {
     await _saveAll(all);
   }
 
-  /// Aynı isimde klasör var mı kontrol eder (büyük/küçük harf duyarsız).
+  /// Aynı isimde klasör var mı (normalize edilmiş isim: ı/i, u/ü, o/ö, noktalama).
   Future<bool> hasFolderWithName(String ownerId, String name) async {
     final files = await getFiles(ownerId);
-    final normalized = name.trim().toLowerCase();
-    return files.any((f) => f.name.trim().toLowerCase() == normalized);
+    final key = normalizeFolderNameForDuplicate(name);
+    if (key.isEmpty) return false;
+    return files.any(
+        (f) => normalizeFolderNameForDuplicate(f.name) == key);
   }
 
   /// Dosya adına göre bulur, yoksa null.

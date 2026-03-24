@@ -202,15 +202,101 @@ final groupAllTasksCountProvider =
   return repo.watchGroupTasks(groupId).map((tasks) => tasks.length);
 });
 
-// ─── Today stats ─────────────────────────────────────────────────────────
-final todayStatsProvider = Provider<({int total, int done})>((ref) {
-  final today = ref.watch(todayTasksProvider).valueOrNull ?? [];
-  final completed = ref.watch(completedTasksProvider).valueOrNull ?? [];
+// ─── İlerleme çubukları (Bugün / Devam eden) — kişisel + grup ─────────────
+
+/// Bugün tamamlanan görev sayısı (completedAt = bugün).
+int _countCompletedToday(List<TaskEntity> completed) {
   final now = DateTime.now();
-  final todayDone = completed.where((t) {
+  return completed.where((t) {
     final c = t.completedAt;
     if (c == null) return false;
     return c.year == now.year && c.month == now.month && c.day == now.day;
   }).length;
-  return (total: today.length + todayDone, done: todayDone);
+}
+
+typedef TaskProgressPair = ({int done, int total});
+
+/// Ana ekran: Bugün (son tarihi bugün bekleyen + bugün tamamlanan) ve Devam eden (aktif+tamamlanan).
+final homeTaskProgressProvider = Provider<TaskProgressSnapshot>((ref) {
+  final todayAsync = ref.watch(todayTasksProvider);
+  final activeAsync = ref.watch(activeTasksProvider);
+  final completedAsync = ref.watch(completedTasksProvider);
+  final loading =
+      todayAsync.isLoading || activeAsync.isLoading || completedAsync.isLoading;
+  if (loading || !todayAsync.hasValue || !activeAsync.hasValue || !completedAsync.hasValue) {
+    return TaskProgressSnapshot.loading();
+  }
+  final todayActive = todayAsync.value!;
+  final active = activeAsync.value!;
+  final completed = completedAsync.value!;
+  final todayDone = _countCompletedToday(completed);
+  final todayTotal = todayActive.length + todayDone;
+  final ongoingTotal = active.length + completed.length;
+  return TaskProgressSnapshot(
+    loading: false,
+    today: (done: todayDone, total: todayTotal),
+    ongoing: (done: completed.length, total: ongoingTotal),
+  );
+});
+
+class TaskProgressSnapshot {
+  const TaskProgressSnapshot({
+    required this.loading,
+    required this.today,
+    required this.ongoing,
+  });
+
+  factory TaskProgressSnapshot.loading() => const TaskProgressSnapshot(
+        loading: true,
+        today: (done: 0, total: 0),
+        ongoing: (done: 0, total: 0),
+      );
+
+  final bool loading;
+  final TaskProgressPair today;
+  final TaskProgressPair ongoing;
+}
+
+// ─── Grup görevleri: istatistik akışları (sekmeden bağımsız) ───────────────
+
+final groupStatsTodayTasksProvider =
+    StreamProvider.family<List<TaskEntity>, String>((ref, groupId) {
+  return ref.watch(taskRepositoryProvider).watchGroupTodayTasks(groupId);
+});
+
+final groupStatsActiveTasksProvider =
+    StreamProvider.family<List<TaskEntity>, String>((ref, groupId) {
+  return ref.watch(taskRepositoryProvider).watchGroupActiveTasks(groupId);
+});
+
+final groupStatsCompletedTasksProvider =
+    StreamProvider.family<List<TaskEntity>, String>((ref, groupId) {
+  return ref.watch(taskRepositoryProvider).watchGroupCompletedTasks(groupId);
+});
+
+final groupTaskProgressProvider =
+    Provider.family<TaskProgressSnapshot, String>((ref, groupId) {
+  final todayAsync = ref.watch(groupStatsTodayTasksProvider(groupId));
+  final activeAsync = ref.watch(groupStatsActiveTasksProvider(groupId));
+  final completedAsync = ref.watch(groupStatsCompletedTasksProvider(groupId));
+  final loading = todayAsync.isLoading ||
+      activeAsync.isLoading ||
+      completedAsync.isLoading;
+  if (loading ||
+      !todayAsync.hasValue ||
+      !activeAsync.hasValue ||
+      !completedAsync.hasValue) {
+    return TaskProgressSnapshot.loading();
+  }
+  final todayActive = todayAsync.value!;
+  final active = activeAsync.value!;
+  final completed = completedAsync.value!;
+  final todayDone = _countCompletedToday(completed);
+  final todayTotal = todayActive.length + todayDone;
+  final ongoingTotal = active.length + completed.length;
+  return TaskProgressSnapshot(
+    loading: false,
+    today: (done: todayDone, total: todayTotal),
+    ongoing: (done: completed.length, total: ongoingTotal),
+  );
 });

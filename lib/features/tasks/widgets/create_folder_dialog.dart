@@ -76,7 +76,7 @@ Future<void> showCreateFolderDialog(
       ownerId: user.uid,
       name: name,
     );
-    ref.refresh(taskFilesProvider);
+    ref.invalidate(taskFilesProvider);
     onFolderCreated?.call(file.id);
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -85,10 +85,14 @@ Future<void> showCreateFolderDialog(
     }
   } catch (e) {
     if (context.mounted) {
+      final msg = e.toString().contains('duplicate_folder')
+          ? l.duplicateFolderWarning
+          : '${l.folderCreateError}: $e';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${l.folderCreateError}: $e'),
-          backgroundColor: Colors.red,
+          content: Text(msg),
+          backgroundColor:
+              e.toString().contains('duplicate_folder') ? Colors.orange : Colors.red,
         ),
       );
     }

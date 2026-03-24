@@ -16,10 +16,12 @@ import 'package:todo_note/data/repositories/task_repository.dart'
 import 'package:todo_note/features/tasks/providers/tasks_provider.dart'
     show GroupTaskTab, groupAllTasksCountProvider, groupMembersProvider,
         groupTaskTabProvider, groupSearchQueryProvider, groupTasksProvider,
-        groupTaskFilterProvider, taskFilesProvider, communityByIdProvider,
-        communitySubGroupsProvider, projectByIdProvider;
+        groupTaskFilterProvider, groupTaskProgressProvider, taskFilesProvider,
+        communityByIdProvider, communitySubGroupsProvider, projectByIdProvider;
 import 'package:todo_note/features/tasks/widgets/home_background.dart';
 import 'package:todo_note/features/tasks/widgets/task_card.dart';
+import 'package:todo_note/features/tasks/widgets/task_progress_dual_section.dart'
+    show TaskProgressTodaySection, TaskProgressOngoingSection;
 import 'package:todo_note/features/chat/widgets/chat_attach_sheet.dart';
 import 'package:todo_note/features/chat/widgets/message_content_widget.dart'
     as msg_widget;
@@ -1199,6 +1201,7 @@ class _CommunityTasksTabState extends ConsumerState<_CommunityTasksTab> {
 
   @override
   Widget build(BuildContext context) {
+    final currentTab = ref.watch(groupTaskTabProvider(widget.groupId));
     final searchQ = ref.watch(groupSearchQueryProvider(widget.groupId));
     final tasksAsync = ref.watch(groupTasksProvider(widget.groupId));
     final membersAsync = ref.watch(groupMembersProvider(widget.groupId));
@@ -1213,6 +1216,7 @@ class _CommunityTasksTabState extends ConsumerState<_CommunityTasksTab> {
     final isOwner = group?.ownerId == user?.uid;
     final canAdd = GroupPermissions.canAddTask(myRole) || isOwner;
     final canComplete = GroupPermissions.canCompleteTask(myRole) || isOwner;
+    final groupProgress = ref.watch(groupTaskProgressProvider(widget.groupId));
 
     var tasks = tasksAsync.valueOrNull ?? [];
     final filter = ref.watch(groupTaskFilterProvider(widget.groupId));
@@ -1306,6 +1310,20 @@ class _CommunityTasksTabState extends ConsumerState<_CommunityTasksTab> {
                   ),
                 ),
               ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              child: switch (currentTab) {
+                GroupTaskTab.today => TaskProgressTodaySection(
+                    snapshot: groupProgress,
+                    compact: true,
+                  ),
+                GroupTaskTab.active => TaskProgressOngoingSection(
+                    snapshot: groupProgress,
+                    compact: true,
+                  ),
+                _ => const SizedBox.shrink(),
+              },
             ),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,

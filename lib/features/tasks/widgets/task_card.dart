@@ -18,6 +18,12 @@ import '../../../services/subtask_storage.dart';
 import '../../auth/auth_provider.dart';
 import '../providers/tasks_provider.dart';
 
+/// Tamamlanmamış görevde son tarih geçmiş (liste görünümü: aktif veya silinmiş).
+bool _isDueOverdueForDisplay(TaskEntity task) {
+  if (task.dueAt == null || task.isCompleted) return false;
+  return task.dueAt!.isBefore(DateTime.now());
+}
+
 class TaskCard extends ConsumerWidget {
   const TaskCard({
     super.key,
@@ -115,7 +121,7 @@ class TaskCard extends ConsumerWidget {
       child: InkWell(
         onTap: () => context.push('/task/${task.id}'),
         borderRadius: BorderRadius.circular(16),
-        child: _NeonTaskCardInner(
+        child: _TaskCardFrame(
           task: task,
           childBuilder: (context, decoration) {
             final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -199,8 +205,8 @@ class TaskCard extends ConsumerWidget {
                           _MetaChip(
                             icon: Icons.calendar_today_outlined,
                             label: _formatDate(task.dueAt!),
-                            color: task.isOverdue
-                                ? cs.error
+                            color: _isDueOverdueForDisplay(task)
+                                ? const Color(0xFFCA8A04)
                                 : cs.onSurface.withOpacity(0.5),
                           ),
                         if (task.reminderAt != null)
@@ -391,71 +397,81 @@ class TaskCard extends ConsumerWidget {
   }
 }
 
-// ── Neon border decoration (blue: ongoing, red blink: expired, green: completed, red: deleted) ─
+// ── Düz kenarlık: mavi devam, yeşil zamanında bitti, sarı yanıp sönen (süresi dolan / geç tamamlanan).
+// Silindi = Bitti ile aynı renk mantığı.
 
-class _NeonDecoration {
-  const _NeonDecoration({required this.border, required this.boxShadow});
+class _TaskCardDecorationData {
+  const _TaskCardDecorationData({required this.border, required this.boxShadow});
   final Border border;
   final List<BoxShadow> boxShadow;
 }
 
-class _NeonTaskCardInner extends StatefulWidget {
-  const _NeonTaskCardInner({
+class _TaskCardFrame extends StatefulWidget {
+  const _TaskCardFrame({
     required this.task,
     required this.childBuilder,
   });
 
   final TaskEntity task;
-  final Widget Function(BuildContext context, _NeonDecoration decoration) childBuilder;
+  final Widget Function(BuildContext context, _TaskCardDecorationData decoration)
+      childBuilder;
 
   @override
-  State<_NeonTaskCardInner> createState() => _NeonTaskCardInnerState();
+  State<_TaskCardFrame> createState() => _TaskCardFrameState();
 }
 
-class _NeonTaskCardInnerState extends State<_NeonTaskCardInner>
+class _TaskCardFrameState extends State<_TaskCardFrame>
     with SingleTickerProviderStateMixin {
+  static const _blue = Color(0xFF2563EB);
+  static const _green = Color(0xFF16A34A);
+  static const _yellow = Color(0xFFCA8A04);
+
   late final AnimationController _blinkController;
   late final Animation<double> _blinkAnimation;
   Timer? _overdueCheckTimer;
 
-  bool get _needsBlink =>
-      widget.task.isOverdue && !widget.task.isCompleted && !widget.task.isDeleted;
+  /// Süresi dolmuş aktif veya silinmiş+tamamlanmamış+son tarih geçmiş veya geç tamamlanan (Bitti/Silindi).
+  bool get _needsYellowBlink {
+    final t = widget.task;
+    if (t.isDeleted) {
+      if (t.isCompleted && t.isCompletedLate) return true;
+      if (!t.isCompleted && _isDueOverdueForDisplay(t)) return true;
+      return false;
+    }
+    if (t.isCompleted && t.isCompletedLate) return true;
+    if (!t.isCompleted && t.isOverdue) return true;
+    return false;
+  }
 
   bool get _couldBecomeOverdue =>
       widget.task.dueAt != null &&
       !widget.task.isCompleted &&
-      !widget.task.isDeleted;
+      !widget.task.isDeleted &&
+      widget.task.dueAt!.isAfter(DateTime.now());
 
   @override
   void initState() {
     super.initState();
     _blinkController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 900),
     );
-    _blinkAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
+    _blinkAnimation = Tween<double>(begin: 0.38, end: 1.0).animate(
       CurvedAnimation(parent: _blinkController, curve: Curves.easeInOut),
     );
-    if (_needsBlink) {
-      // Süresi dolmuş — kırmızı yanıp sönmeyi başlat (Ortak Grup + Topluluk Grubu)
+    if (_needsYellowBlink) {
       _blinkController.repeat(reverse: true);
-      // TabBarView içindeyken ilk frame'de hazır olmayabilir; yedek başlatma
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted &&
-            widget.task.isOverdue &&
-            !widget.task.isCompleted &&
-            !widget.task.isDeleted &&
+            _needsYellowBlink &&
             !_blinkController.isAnimating) {
           _blinkController.repeat(reverse: true);
         }
       });
     } else if (_couldBecomeOverdue) {
-      // Süresi henüz dolmadı — 1 sn'de bir kontrol et, dolunca yanıp sönsün
-      void checkOverdue() {
+      void tick() {
         if (!mounted) return;
-        if (widget.task.isOverdue &&
-            !widget.task.isCompleted &&
-            !widget.task.isDeleted) {
+        if (widget.task.isOverdue) {
           _overdueCheckTimer?.cancel();
           _overdueCheckTimer = null;
           if (!_blinkController.isAnimating) {
@@ -464,24 +480,24 @@ class _NeonTaskCardInnerState extends State<_NeonTaskCardInner>
           setState(() {});
         }
       }
-      checkOverdue(); // Hemen ilk kontrol (TabBarView için)
+      tick();
       _overdueCheckTimer = Timer.periodic(
         const Duration(seconds: 1),
-        (_) => checkOverdue(),
+        (_) => tick(),
       );
     }
   }
 
   @override
-  void didUpdateWidget(covariant _NeonTaskCardInner oldWidget) {
+  void didUpdateWidget(covariant _TaskCardFrame oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (_needsBlink) {
+    if (_needsYellowBlink) {
       _overdueCheckTimer?.cancel();
       _overdueCheckTimer = null;
       if (!_blinkController.isAnimating) {
         _blinkController.repeat(reverse: true);
       }
-    } else if (!_needsBlink && _blinkController.isAnimating) {
+    } else if (!_needsYellowBlink && _blinkController.isAnimating) {
       _blinkController.stop();
       _blinkController.reset();
     }
@@ -494,91 +510,95 @@ class _NeonTaskCardInnerState extends State<_NeonTaskCardInner>
     super.dispose();
   }
 
-  static const _blueNeon = Color(0xFF00BFFF);   // Devam eden (sabit mavi)
-  static const _redNeon = Color(0xFFFF1744);     // Süresi dolmuş / Silinmiş (kırmızı)
-  static const _greenNeon = Color(0xFF00E676);  // Tamamlanmış (sabit yeşil)
-
-  _NeonDecoration _buildDecoration() {
+  List<BoxShadow> _baseShadow(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseShadow = BoxShadow(
-      color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.08),
-      blurRadius: 10,
-      offset: const Offset(0, 3),
-    );
+    return [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.06),
+        blurRadius: 8,
+        offset: const Offset(0, 2),
+      ),
+    ];
+  }
 
-    if (widget.task.isDeleted) {
-      return _NeonDecoration(
-        border: Border.all(color: _redNeon, width: 3),
-        boxShadow: [
-          baseShadow,
-          BoxShadow(
-            color: _redNeon.withValues(alpha: 0.7),
-            blurRadius: 14,
-            spreadRadius: 0,
-          ),
-        ],
+  _TaskCardDecorationData _buildDecoration(BuildContext context) {
+    final baseShadow = _baseShadow(context);
+    final t = widget.task;
+
+    // Silindi: Bitti ile aynı (yeşil / sarı yanıp sönen); tamamlanmamışsa aktif kuralları.
+    if (t.isDeleted) {
+      if (t.isCompleted) {
+        if (t.isCompletedLate) {
+          final a = _needsYellowBlink ? _blinkAnimation.value : 1.0;
+          return _TaskCardDecorationData(
+            border: Border.all(
+              color: _yellow.withValues(alpha: a),
+              width: 2,
+            ),
+            boxShadow: baseShadow,
+          );
+        }
+        return _TaskCardDecorationData(
+          border: Border.all(color: _green, width: 2),
+          boxShadow: baseShadow,
+        );
+      }
+      if (_isDueOverdueForDisplay(t)) {
+        final a = _needsYellowBlink ? _blinkAnimation.value : 1.0;
+        return _TaskCardDecorationData(
+          border: Border.all(color: _yellow.withValues(alpha: a), width: 2),
+          boxShadow: baseShadow,
+        );
+      }
+      return _TaskCardDecorationData(
+        border: Border.all(color: _blue, width: 2),
+        boxShadow: baseShadow,
       );
     }
-    if (widget.task.isCompleted) {
-      return _NeonDecoration(
-        border: Border.all(color: _greenNeon, width: 3),
-        boxShadow: [
-          baseShadow,
-          BoxShadow(
-            color: _greenNeon.withValues(alpha: 0.6),
-            blurRadius: 14,
-            spreadRadius: 0,
-          ),
-        ],
+
+    if (t.isCompleted) {
+      if (t.isCompletedLate) {
+        final a = _needsYellowBlink ? _blinkAnimation.value : 1.0;
+        return _TaskCardDecorationData(
+          border: Border.all(color: _yellow.withValues(alpha: a), width: 2),
+          boxShadow: baseShadow,
+        );
+      }
+      return _TaskCardDecorationData(
+        border: Border.all(color: _green, width: 2),
+        boxShadow: baseShadow,
       );
     }
-    if (widget.task.isOverdue) {
-      final opacity = _needsBlink ? _blinkAnimation.value : 1.0;
-      return _NeonDecoration(
-        border: Border.all(
-          color: _redNeon.withValues(alpha: opacity),
-          width: 3,
-        ),
-        boxShadow: [
-          baseShadow,
-          BoxShadow(
-            color: _redNeon.withValues(alpha: 0.5 * opacity),
-            blurRadius: 14,
-            spreadRadius: 0,
-          ),
-        ],
+
+    if (t.isOverdue) {
+      final a = _needsYellowBlink ? _blinkAnimation.value : 1.0;
+      return _TaskCardDecorationData(
+        border: Border.all(color: _yellow.withValues(alpha: a), width: 2),
+        boxShadow: baseShadow,
       );
     }
-    return _NeonDecoration(
-      border: Border.all(color: _blueNeon, width: 3),
-      boxShadow: [
-        baseShadow,
-        BoxShadow(
-          color: _blueNeon.withValues(alpha: 0.5),
-          blurRadius: 14,
-          spreadRadius: 0,
-        ),
-      ],
+
+    return _TaskCardDecorationData(
+      border: Border.all(color: _blue, width: 2),
+      boxShadow: baseShadow,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_needsBlink) {
+    if (_needsYellowBlink) {
       return AnimatedBuilder(
         animation: _blinkAnimation,
         builder: (context, _) {
-          final decoration = _buildDecoration();
-          return widget.childBuilder(context, decoration);
+          return widget.childBuilder(context, _buildDecoration(context));
         },
       );
     }
-    final decoration = _buildDecoration();
-    return widget.childBuilder(context, decoration);
+    return widget.childBuilder(context, _buildDecoration(context));
   }
 }
 
-/// Turuncu çarpı ikonu ve "zamanında bitirilemedi" metni — yavaş yanıp söner.
+/// Sarı tonlu çarpı ikonu ve "zamanında bitirilemedi" metni — yavaş yanıp söner.
 class _LateCompletedBadge extends ConsumerStatefulWidget {
   const _LateCompletedBadge();
 
@@ -621,7 +641,7 @@ class _LateCompletedBadgeState extends ConsumerState<_LateCompletedBadge>
             Icon(
               Icons.close_rounded,
               size: 18,
-              color: const Color(0xFFFF9800)
+              color: const Color(0xFFCA8A04)
                   .withValues(alpha: _blinkAnim.value),
             ),
             const SizedBox(width: 6),
@@ -630,7 +650,7 @@ class _LateCompletedBadgeState extends ConsumerState<_LateCompletedBadge>
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: const Color(0xFFFF9800)
+                color: const Color(0xFFCA8A04)
                     .withValues(alpha: _blinkAnim.value),
               ),
             ),
