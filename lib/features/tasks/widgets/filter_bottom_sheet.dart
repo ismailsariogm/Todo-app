@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/theme.dart';
 import '../../../domain/entities/filter_entity.dart';
 import '../providers/filter_provider.dart';
-import '../../../domain/entities/task_file_entity.dart';
 import '../providers/tasks_provider.dart';
 import '../../../data/repositories/project_repository.dart';
 import '../../auth/auth_provider.dart';
+import '../../../app/app_l10n.dart';
+import 'create_folder_dialog.dart';
+import 'folder_manage_bottom_sheet.dart';
 
 class FilterBottomSheet extends ConsumerStatefulWidget {
   const FilterBottomSheet({super.key});
@@ -35,6 +37,7 @@ class _FilterBottomSheetState extends ConsumerState<FilterBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l = ref.watch(appL10nProvider);
     final projects = ref.watch(projectsProvider).valueOrNull ?? [];
     final filesAsync = ref.watch(taskFilesProvider);
 
@@ -178,42 +181,84 @@ class _FilterBottomSheetState extends ConsumerState<FilterBottomSheet> {
                   const SizedBox(height: 20),
                 ],
 
-                // ── Klasör (kişisel görev kategorileri) ───────────
+                // ── Klasör (yalnızca filtre panelinde; çubukta yönetim ikonu) ──
+                _SectionLabel('Klasör'),
                 filesAsync.when(
-                  loading: () => const SizedBox.shrink(),
-                  error: (_, __) => const SizedBox.shrink(),
+                  loading: () => const Padding(
+                    padding: EdgeInsets.only(bottom: 12),
+                    child: SizedBox(
+                      height: 28,
+                      child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                    ),
+                  ),
+                  error: (_, __) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(l.foldersLoadError,
+                        style: TextStyle(color: cs.error)),
+                  ),
                   data: (files) {
-                    if (files.isEmpty) return const SizedBox.shrink();
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _SectionLabel('Klasör'),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            ChoiceChip(
-                              label: const Text('Tümü'),
-                              selected: _local.fileId == null,
-                              onSelected: (_) => setState(
-                                () => _local =
-                                    _local.copyWith(clearFileId: true),
-                              ),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            onPressed: () => showFolderManageSheet(context, ref),
+                            icon: const Icon(Icons.folder_special_outlined, size: 18),
+                            label: const Text('Klasörleri yönet'),
+                          ),
+                        ),
+                        if (files.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  l.noFoldersSubtitle,
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                const SizedBox(height: 8),
+                                TextButton.icon(
+                                  onPressed: () async {
+                                    await showCreateFolderDialog(context, ref);
+                                    if (context.mounted) {
+                                      ref.invalidate(taskFilesProvider);
+                                    }
+                                  },
+                                  icon: const Icon(Icons.add, size: 18),
+                                  label: Text(l.addFolder),
+                                ),
+                              ],
                             ),
-                            ...files.map(
-                              (f) => ChoiceChip(
-                                label: Text(f.name),
-                                selected: _local.fileId == f.id,
+                          )
+                        else
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              ChoiceChip(
+                                label: const Text('Tümü'),
+                                selected: _local.fileId == null,
                                 onSelected: (_) => setState(
-                                  () => _local = _local.copyWith(
-                                    fileId: _local.fileId == f.id ? null : f.id,
-                                    clearFileId: _local.fileId == f.id,
+                                  () => _local =
+                                      _local.copyWith(clearFileId: true),
+                                ),
+                              ),
+                              ...files.map(
+                                (f) => ChoiceChip(
+                                  label: Text(f.name),
+                                  selected: _local.fileId == f.id,
+                                  onSelected: (_) => setState(
+                                    () => _local = _local.copyWith(
+                                      fileId: _local.fileId == f.id ? null : f.id,
+                                      clearFileId: _local.fileId == f.id,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
                         const SizedBox(height: 20),
                       ],
                     );

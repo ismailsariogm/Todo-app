@@ -59,7 +59,7 @@ class TaskFileStorage {
     required String name,
     String? colorHex,
   }) async {
-    if (await hasFolderWithName(ownerId, name)) {
+    if (await hasFolderWithName(ownerId, name.trim())) {
       throw StateError('duplicate_folder');
     }
     final all = await _loadAll();
@@ -77,12 +77,27 @@ class TaskFileStorage {
     return file;
   }
 
-  /// Dosyayı günceller.
+  /// Dosyayı günceller (isim çakışması varsa [StateError] duplicate_folder).
   Future<void> updateFile(TaskFileEntity file) async {
+    final trimmed = file.name.trim();
+    if (trimmed.isEmpty) {
+      throw StateError('empty_folder_name');
+    }
+    if (await hasFolderWithName(file.ownerId, trimmed,
+        excludeFileId: file.id)) {
+      throw StateError('duplicate_folder');
+    }
     final all = await _loadAll();
     final idx = all.indexWhere((f) => f.id == file.id);
     if (idx >= 0) {
-      all[idx] = file;
+      all[idx] = TaskFileEntity(
+        id: file.id,
+        ownerId: file.ownerId,
+        name: trimmed,
+        colorHex: file.colorHex,
+        sortOrder: file.sortOrder,
+        createdAt: file.createdAt,
+      );
       await _saveAll(all);
     }
   }
@@ -95,12 +110,20 @@ class TaskFileStorage {
   }
 
   /// Aynı isimde klasör var mı (normalize edilmiş isim: ı/i, u/ü, o/ö, noktalama).
-  Future<bool> hasFolderWithName(String ownerId, String name) async {
+  /// [excludeFileId] yeniden adlandırma sırasında aynı kaydı hariç tutar.
+  Future<bool> hasFolderWithName(
+    String ownerId,
+    String name, {
+    String? excludeFileId,
+  }) async {
     final files = await getFiles(ownerId);
     final key = normalizeFolderNameForDuplicate(name);
     if (key.isEmpty) return false;
     return files.any(
-        (f) => normalizeFolderNameForDuplicate(f.name) == key);
+      (f) =>
+          f.id != excludeFileId &&
+          normalizeFolderNameForDuplicate(f.name) == key,
+    );
   }
 
   /// Dosya adına göre bulur, yoksa null.

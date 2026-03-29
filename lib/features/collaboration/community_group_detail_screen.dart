@@ -18,6 +18,7 @@ import 'package:todo_note/features/tasks/providers/tasks_provider.dart'
         groupTaskTabProvider, groupSearchQueryProvider, groupTasksProvider,
         groupTaskFilterProvider, groupTaskProgressProvider, taskFilesProvider,
         communityByIdProvider, communitySubGroupsProvider, projectByIdProvider;
+import 'package:todo_note/features/tasks/widgets/folder_manage_bottom_sheet.dart';
 import 'package:todo_note/features/tasks/widgets/home_background.dart';
 import 'package:todo_note/features/tasks/widgets/task_card.dart';
 import 'package:todo_note/features/tasks/widgets/task_progress_dual_section.dart'
@@ -1398,6 +1399,7 @@ class _CommunityTasksTabState extends ConsumerState<_CommunityTasksTab> {
                       ),
                     ),
                   ),
+                  const FolderManageToolbarGlassButton(),
                   ..._tabs.map((opt) {
                   final active = ref.watch(groupTaskTabProvider(widget.groupId)) == opt.tab;
                   return GestureDetector(

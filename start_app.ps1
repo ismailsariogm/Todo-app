@@ -52,9 +52,21 @@ Write-Host "  Flutter baslatiliyor -> http://localhost:8080" -ForegroundColor Cy
 Write-Host "  Durdurmak icin: Ctrl+C" -ForegroundColor DarkGray
 Write-Host ""
 
+# Ayri surec: HTTP 200 olunca tarayici acilir (ana surec flutter'da bloklu; Start-Job Receive edilmezdi)
+$openWebScript = Join-Path $projectRoot "tool\open_web_when_ready.ps1"
+if (Test-Path -LiteralPath $openWebScript) {
+  $null = Start-Process -FilePath "powershell.exe" -ArgumentList @(
+    "-NoProfile"
+    "-ExecutionPolicy", "Bypass"
+    "-WindowStyle", "Hidden"
+    "-File", $openWebScript
+  ) -PassThru
+  Write-Host "  Tarayici, sunucu hazir olunca acilacak..." -ForegroundColor DarkGray
+}
+
 try {
   Set-Location $projectRoot
-  flutter run -d chrome --web-port 8080
+  flutter run -d chrome --web-port 8080 --web-hostname localhost
 } finally {
   if ($serverProc -and -not $serverProc.HasExited) {
     $serverProc.Kill()

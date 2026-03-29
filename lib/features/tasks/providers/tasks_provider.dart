@@ -45,6 +45,14 @@ final deletedTasksProvider = StreamProvider<List<TaskEntity>>((ref) {
   return repo.watchDeletedTasks(user.uid);
 });
 
+/// Kişisel silinmemiş görevler (klasör grafikleri).
+final personalTasksAnalyticsProvider = StreamProvider<List<TaskEntity>>((ref) {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return const Stream.empty();
+  final repo = ref.watch(taskRepositoryProvider);
+  return repo.watchPersonalTasksNonDeleted(user.uid);
+});
+
 // ─── Filtered tasks ───────────────────────────────────────────────────────
 final filteredTasksProvider = StreamProvider<List<TaskEntity>>((ref) {
   final user = ref.watch(currentUserProvider);

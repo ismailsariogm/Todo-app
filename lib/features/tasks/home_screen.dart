@@ -105,6 +105,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ],
                 ),
               ),
+              TextButton.icon(
+                onPressed: () => context.push(AppRoutes.folderCharts),
+                icon: const Icon(Icons.bar_chart_rounded,
+                    color: Colors.white, size: 20),
+                label: const Text(
+                  'Grafik',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
             ],
           ),
 

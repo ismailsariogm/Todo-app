@@ -15,6 +15,8 @@ abstract class BaseTaskRepository {
   Stream<List<TaskEntity>> watchCompletedTasks(String ownerId);
   Stream<List<TaskEntity>> watchDeletedTasks(String ownerId);
   Stream<List<TaskEntity>> watchTodayTasks(String ownerId);
+  /// Kişisel, silinmemiş görevler (grafik / analiz).
+  Stream<List<TaskEntity>> watchPersonalTasksNonDeleted(String ownerId);
   Stream<List<TaskEntity>> watchFilteredTasks({
     required String ownerId,
     required TaskFilter filter,
@@ -48,6 +50,9 @@ abstract class BaseTaskRepository {
   Future<void> restoreTask(String id);
   Future<void> hardDeleteTask(String id);
   Future<void> purgeOldDeletedTasks({int daysThreshold});
+
+  /// Klasör silindiğinde bu kullanıcının görevlerinde [fileId] kaldırılır.
+  Future<void> clearFileIdForOwnerTasks(String ownerId, String fileId);
 }
 
 const _kKey = 'web_tasks_v1';
@@ -179,6 +184,16 @@ class WebTaskRepository extends BaseTaskRepository {
       sort: (l) => l..sort((a, b) => a.priority.compareTo(b.priority)),
     );
   }
+
+  @override
+  Stream<List<TaskEntity>> watchPersonalTasksNonDeleted(String ownerId) =>
+      _filtered(
+        (t) =>
+            t.ownerId == ownerId &&
+            !t.isDeleted &&
+            t.projectId == null,
+        sort: (l) => l..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
+      );
 
   Stream<List<TaskEntity>> watchFilteredTasks({
     required String ownerId,
@@ -410,5 +425,18 @@ class WebTaskRepository extends BaseTaskRepository {
           t.deletedAt!.isBefore(cutoff),
     );
     await _save();
+  }
+
+  @override
+  Future<void> clearFileIdForOwnerTasks(String ownerId, String fileId) async {
+    var changed = false;
+    for (var i = 0; i < _tasks.length; i++) {
+      final t = _tasks[i];
+      if (t.ownerId == ownerId && t.fileId == fileId) {
+        _tasks[i] = t.copyWith(clearFileId: true);
+        changed = true;
+      }
+    }
+    if (changed) await _save();
   }
 }

@@ -17,6 +17,7 @@ import 'package:todo_note/features/tasks/providers/tasks_provider.dart'
         taskFilesProvider;
 import 'package:todo_note/features/tasks/providers/group_filter_provider.dart';
 import 'package:todo_note/app/theme.dart' show PriorityColor;
+import 'package:todo_note/features/tasks/widgets/folder_manage_bottom_sheet.dart';
 import 'package:todo_note/features/tasks/widgets/home_background.dart';
 import 'package:todo_note/features/tasks/widgets/task_card.dart';
 import 'package:todo_note/features/tasks/widgets/task_progress_dual_section.dart'
@@ -1200,6 +1201,7 @@ class _TasksTabState extends ConsumerState<_TasksTab> {
                       ),
                     ),
                   ),
+                  const FolderManageToolbarGlassButton(),
                   ..._tabs.map((opt) {
                   final active = currentTab == opt.tab;
                   return GestureDetector(
