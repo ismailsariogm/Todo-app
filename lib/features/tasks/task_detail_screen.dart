@@ -1,3 +1,4 @@
+import 'dart:async' show unawaited;
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -15,9 +16,11 @@ import '../../domain/entities/task_entity.dart';
 import '../../domain/entities/subtask_entity.dart';
 import '../../services/auto_sync_service.dart';
 import '../../services/subtask_storage.dart';
+import '../../services/task_history_service.dart';
 import '../../services/task_view_storage.dart';
 import '../auth/auth_provider.dart';
 import '../tasks/widgets/home_background.dart';
+import '../tasks/widgets/task_info_sheet.dart';
 import 'providers/tasks_provider.dart'
     show taskByIdProvider, groupMembersProvider, subtasksProvider;
 
@@ -145,15 +148,19 @@ class _TaskDetailState extends ConsumerState<_TaskDetail> {
 
   Future<void> _recordView() async {
     final user = ref.read(currentUserProvider);
-    if (user == null || widget.task.projectId == null) return;
-    final membersAsync = ref.read(groupMembersProvider(widget.task.projectId!));
-    final members = membersAsync.valueOrNull ?? [];
-    final m = members.where((x) => x.userId == user.uid).firstOrNull;
-    final role = switch (m?.role) {
-      'yonetici' || 'owner' => 'Yönetici',
-      'kıdemli' => 'Kıdemli',
-      _ => 'Üye',
-    };
+    if (user == null) return;
+    String role = '';
+    if (widget.task.projectId != null) {
+      final membersAsync =
+          ref.read(groupMembersProvider(widget.task.projectId!));
+      final members = membersAsync.valueOrNull ?? [];
+      final m = members.where((x) => x.userId == user.uid).firstOrNull;
+      role = switch (m?.role) {
+        'yonetici' || 'owner' => 'Yönetici',
+        'kıdemli' => 'Kıdemli',
+        _ => 'Üye',
+      };
+    }
     await recordTaskView(TaskViewRecord(
       taskId: widget.task.id,
       userId: user.uid,
@@ -236,6 +243,11 @@ class _TaskDetailState extends ConsumerState<_TaskDetail> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.info_outline_rounded, color: Colors.white),
+            tooltip: 'Görev Bilgisi',
+            onPressed: () => showTaskInfoSheet(context, task.id),
+          ),
           if (!task.isDeleted)
             IconButton(
               icon: const Icon(Icons.edit_outlined, color: Colors.white),
@@ -481,73 +493,6 @@ class _TaskDetailState extends ConsumerState<_TaskDetail> {
                   ),
                 ),
 
-                // ── Footer ────────────────────────────────────────
-                const SizedBox(height: 20),
-                const Divider(),
-                const SizedBox(height: 8),
-                if (task.updatedByUserId != null) ...[
-                  _UserInfoRow(
-                    icon: Icons.edit_outlined,
-                    label: 'Düzenleyen',
-                    name: _editorDisplayName(task.updatedByUserId!),
-                    role: _editorRole(task.updatedByUserId!),
-                    date: task.updatedAt,
-                  ),
-                  const SizedBox(height: 4),
-                ],
-                if (task.projectId != null) ...[
-                  _UserInfoRow(
-                    icon: Icons.person_add_outlined,
-                    label: 'Oluşturan',
-                    name: _creatorName(),
-                    role: _creatorRole(),
-                    date: task.createdAt,
-                  ),
-                  if (task.isCompleted && task.completedByUserId != null) ...[
-                    const SizedBox(height: 4),
-                    _UserInfoRow(
-                      icon: Icons.check_circle_outline,
-                      label: 'Tamamlayan',
-                      name: _memberName(task.completedByUserId),
-                      role: _memberRole(task.completedByUserId!),
-                      date: task.completedAt,
-                    ),
-                  ],
-                  if (task.isDeleted && task.deletedByUserId != null) ...[
-                    const SizedBox(height: 4),
-                    _UserInfoRow(
-                      icon: Icons.delete_outline,
-                      label: 'Silen',
-                      name: _memberName(task.deletedByUserId),
-                      role: _memberRole(task.deletedByUserId!),
-                      date: task.deletedAt,
-                    ),
-                  ],
-                  if (_taskViews.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    _MetaSection(
-                      title: 'Görüntüleyenler',
-                      child: Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: _taskViews.map((v) => _ViewerChip(
-                          name: v.userDisplayName,
-                          role: v.userRole,
-                          date: v.viewedAt,
-                        )).toList(),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 8),
-                ],
-                Text(
-                  'Oluşturuldu: ${DateFormat('d MMM yyyy, HH:mm', 'tr_TR').format(task.createdAt)}',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                Text(
-                  'Güncellendi: ${DateFormat('d MMM yyyy, HH:mm', 'tr_TR').format(task.updatedAt)}',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
                 const SizedBox(height: 48),
               ],
             ),
@@ -565,24 +510,60 @@ class _TaskDetailState extends ConsumerState<_TaskDetail> {
 
   Future<void> _toggleComplete(BuildContext context) async {
     HapticFeedback.lightImpact();
-    final userId = ref.read(currentUserProvider)?.uid;
+    final user = ref.read(currentUserProvider);
+    final userId = user?.uid;
+    final displayName = user?.displayName.isEmpty == true
+        ? 'Kullanıcı'
+        : (user?.displayName ?? 'Kullanıcı');
     final repo = ref.read(taskRepositoryProvider);
+    final isUndo = widget.task.isCompleted;
     await repo.completeTask(widget.task.id,
-        undo: widget.task.isCompleted, completedByUserId: userId);
+        undo: isUndo, completedByUserId: userId);
+    if (userId != null) {
+      unawaited(recordCompleted(
+        taskId: widget.task.id,
+        userId: userId,
+        userDisplayName: displayName,
+        undo: isUndo,
+      ));
+    }
     ref.invalidate(taskByIdProvider(widget.task.id));
   }
 
   Future<void> _delete(BuildContext context) async {
-    final userId = ref.read(currentUserProvider)?.uid;
+    final user = ref.read(currentUserProvider);
+    final userId = user?.uid;
+    final displayName = user?.displayName.isEmpty == true
+        ? 'Kullanıcı'
+        : (user?.displayName ?? 'Kullanıcı');
     final repo = ref.read(taskRepositoryProvider);
     await repo.softDeleteTask(widget.task.id, deletedByUserId: userId);
+    if (userId != null) {
+      unawaited(recordDeleted(
+        taskId: widget.task.id,
+        userId: userId,
+        userDisplayName: displayName,
+      ));
+    }
     ref.invalidate(taskByIdProvider(widget.task.id));
     if (context.mounted) context.pop();
   }
 
   Future<void> _restore(BuildContext context) async {
+    final user = ref.read(currentUserProvider);
+    final userId = user?.uid;
+    final displayName = user?.displayName.isEmpty == true
+        ? 'Kullanıcı'
+        : (user?.displayName ?? 'Kullanıcı');
     final repo = ref.read(taskRepositoryProvider);
     await repo.restoreTask(widget.task.id);
+    if (userId != null) {
+      unawaited(recordRestored(
+        taskId: widget.task.id,
+        userId: userId,
+        userDisplayName: displayName,
+      ));
+    }
     ref.invalidate(taskByIdProvider(widget.task.id));
     if (context.mounted) context.pop();
   }
@@ -943,70 +924,6 @@ class _SubtaskItem extends StatelessWidget {
   }
 }
 
-class _ViewerChip extends StatelessWidget {
-  const _ViewerChip({
-    required this.name,
-    required this.role,
-    required this.date,
-  });
-
-  final String name;
-  final String role;
-  final DateTime date;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final parts = <String>[name];
-    if (role.isNotEmpty) parts.add(role);
-    parts.add(DateFormat('d MMM yyyy, HH:mm', 'tr_TR').format(date));
-    return Chip(
-      avatar: CircleAvatar(
-        radius: 12,
-        backgroundColor: cs.primaryContainer,
-        child: Text(
-          name.isNotEmpty ? name[0].toUpperCase() : '?',
-          style: TextStyle(color: cs.onPrimaryContainer, fontSize: 11),
-        ),
-      ),
-      label: Text(parts.join(' • '), style: const TextStyle(fontSize: 12)),
-      visualDensity: VisualDensity.compact,
-    );
-  }
-}
-
-class _UserInfoRow extends StatelessWidget {
-  const _UserInfoRow({
-    required this.icon,
-    required this.label,
-    required this.name,
-    required this.role,
-    required this.date,
-  });
-
-  final IconData icon;
-  final String label;
-  final String name;
-  final String role;
-  final DateTime? date;
-
-  @override
-  Widget build(BuildContext context) {
-    final parts = <String>[name];
-    if (role.isNotEmpty) parts.add(role);
-    if (date != null) parts.add(DateFormat('d MMM yyyy, HH:mm', 'tr_TR').format(date!));
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
-        const SizedBox(width: 8),
-        Text(
-          '$label: ${parts.join(' • ')}',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-      ],
-    );
-  }
-}
 
 /// Yorum yapan benzersiz kullanıcılar — tıklanınca o kullanıcının yorumları açılır.
 class _CommentAuthorsStrip extends StatelessWidget {

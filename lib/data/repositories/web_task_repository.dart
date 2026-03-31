@@ -17,6 +17,10 @@ abstract class BaseTaskRepository {
   Stream<List<TaskEntity>> watchTodayTasks(String ownerId);
   /// Kişisel, silinmemiş görevler (grafik / analiz).
   Stream<List<TaskEntity>> watchPersonalTasksNonDeleted(String ownerId);
+  /// Tüm kullanıcı görevleri (kişisel + grup) silinmemiş — grafik / analiz.
+  Stream<List<TaskEntity>> watchAllUserTasksNonDeleted(String ownerId);
+  /// Tüm kişisel görevler (silinmiş dahil) — grafik / analiz.
+  Stream<List<TaskEntity>> watchAllPersonalTasks(String ownerId);
   Stream<List<TaskEntity>> watchFilteredTasks({
     required String ownerId,
     required TaskFilter filter,
@@ -192,6 +196,22 @@ class WebTaskRepository extends BaseTaskRepository {
             t.ownerId == ownerId &&
             !t.isDeleted &&
             t.projectId == null,
+        sort: (l) => l..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
+      );
+
+  /// Tüm kullanıcı görevleri — kişisel + grup, silinmemiş (grafik analizi için).
+  @override
+  Stream<List<TaskEntity>> watchAllUserTasksNonDeleted(String ownerId) =>
+      _filtered(
+        (t) => t.ownerId == ownerId && !t.isDeleted,
+        sort: (l) => l..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
+      );
+
+  /// Tüm kişisel görevler — silinmiş dahil (grafik analizi için).
+  @override
+  Stream<List<TaskEntity>> watchAllPersonalTasks(String ownerId) =>
+      _filtered(
+        (t) => t.ownerId == ownerId && t.projectId == null,
         sort: (l) => l..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
       );
 

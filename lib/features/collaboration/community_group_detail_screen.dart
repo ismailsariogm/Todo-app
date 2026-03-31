@@ -108,7 +108,7 @@ class _CommunityGroupDetailScreenState
   @override
   void dispose() {
     _tabCtrl.removeListener(_onTabChanged);
-    _updateBadgesForTab(_tabCtrl.index);
+    // NOT: ref.read() dispose() içinde çağrılamaz (Riverpod hata verir).
     _tabCtrl.dispose();
     _msgCtrl.dispose();
     super.dispose();

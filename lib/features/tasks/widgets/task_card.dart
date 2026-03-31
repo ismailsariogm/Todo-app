@@ -15,8 +15,10 @@ import '../../../domain/entities/task_entity.dart';
 import '../../../services/auto_sync_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/subtask_storage.dart';
+import '../../../services/task_history_service.dart';
 import '../../auth/auth_provider.dart';
 import '../providers/tasks_provider.dart';
+import 'task_info_sheet.dart';
 
 /// Tamamlanmamış görevde son tarih geçmiş (liste görünümü: aktif veya silinmiş).
 bool _isDueOverdueForDisplay(TaskEntity task) {
@@ -226,69 +228,6 @@ class TaskCard extends ConsumerWidget {
                           ),
                       ],
                     ),
-                    if (groupId != null &&
-                        groupMembers.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 4,
-                        children: [
-                          _UserMetaChip(
-                            icon: Icons.person_add_outlined,
-                            label: _memberName(task.ownerId),
-                            role: _memberRole(task.ownerId),
-                            date: task.createdAt,
-                          ),
-                          if (task.isCompleted &&
-                              task.completedByUserId != null) ...[
-                            const SizedBox(width: 4),
-                            _UserMetaChip(
-                              icon: Icons.check_circle_outline,
-                              label: _memberName(task.completedByUserId!),
-                              role: _memberRole(task.completedByUserId!),
-                              date: task.completedAt,
-                            ),
-                          ],
-                          if (task.isDeleted &&
-                              task.deletedByUserId != null) ...[
-                            const SizedBox(width: 4),
-                            _UserMetaChip(
-                              icon: Icons.delete_outline,
-                              label: _memberName(task.deletedByUserId!),
-                              role: _memberRole(task.deletedByUserId!),
-                              date: task.deletedAt,
-                            ),
-                          ],
-                          if (task.updatedByUserId != null) ...[
-                            const SizedBox(width: 4),
-                            _UserMetaChip(
-                              icon: Icons.edit_outlined,
-                              label: _memberName(task.updatedByUserId!),
-                              role: _memberRole(task.updatedByUserId!),
-                              date: task.updatedAt,
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                    if (groupId == null &&
-                        task.updatedByUserId != null) ...[
-                      const SizedBox(height: 8),
-                      _UserMetaChip(
-                        icon: Icons.edit_outlined,
-                        label: () {
-                          final user = ref.watch(currentUserProvider);
-                          if (user?.uid == task.updatedByUserId) {
-                            return user?.displayName?.isNotEmpty == true
-                                ? user!.displayName!
-                                : 'Siz';
-                          }
-                          return 'Kullanıcı';
-                        }(),
-                        role: '',
-                        date: task.updatedAt,
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -315,6 +254,18 @@ class TaskCard extends ConsumerWidget {
                     ),
                   ),
                 ),
+              // ── Info button ───────────────────────────────────────
+              GestureDetector(
+                onTap: () => showTaskInfoSheet(context, task.id),
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 6, top: 2),
+                  child: Icon(
+                    Icons.info_outline_rounded,
+                    size: 18,
+                    color: cs.onSurface.withValues(alpha: 0.35),
+                  ),
+                ),
+              ),
             ],
           ),
         );
@@ -336,7 +287,11 @@ class TaskCard extends ConsumerWidget {
   }
 
   Future<void> _complete(WidgetRef ref, BuildContext context) async {
-    final userId = ref.read(currentUserProvider)?.uid;
+    final user = ref.read(currentUserProvider);
+    final userId = user?.uid;
+    final displayName = user?.displayName.isEmpty == true
+        ? 'Kullanıcı'
+        : (user?.displayName ?? 'Kullanıcı');
     HapticFeedback.lightImpact();
     if (!task.isCompleted) {
       final subs = await loadSubtasks(task.id);
@@ -357,9 +312,18 @@ class TaskCard extends ConsumerWidget {
         }
       }
     }
+    final isUndo = task.isCompleted;
     final repo = ref.read(taskRepositoryProvider);
     await repo.completeTask(task.id,
-        undo: task.isCompleted, completedByUserId: userId);
+        undo: isUndo, completedByUserId: userId);
+    if (userId != null) {
+      unawaited(recordCompleted(
+        taskId: task.id,
+        userId: userId,
+        userDisplayName: displayName,
+        undo: isUndo,
+      ));
+    }
     if (!task.isCompleted && task.reminderAt != null) {
       await NotificationService.instance.cancelReminder(task.id);
     }
@@ -369,9 +333,20 @@ class TaskCard extends ConsumerWidget {
 
   Future<void> _delete(WidgetRef ref, BuildContext context) async {
     HapticFeedback.mediumImpact();
-    final userId = ref.read(currentUserProvider)?.uid;
+    final user = ref.read(currentUserProvider);
+    final userId = user?.uid;
+    final displayName = user?.displayName.isEmpty == true
+        ? 'Kullanıcı'
+        : (user?.displayName ?? 'Kullanıcı');
     final repo = ref.read(taskRepositoryProvider);
     await repo.softDeleteTask(task.id, deletedByUserId: userId);
+    if (userId != null) {
+      unawaited(recordDeleted(
+        taskId: task.id,
+        userId: userId,
+        userDisplayName: displayName,
+      ));
+    }
     await NotificationService.instance.cancelReminder(task.id);
     AutoSyncService.instance.flush();
     onDelete?.call();
@@ -389,9 +364,21 @@ class TaskCard extends ConsumerWidget {
   }
 
   Future<void> _restore(WidgetRef ref) async {
+    final user = ref.read(currentUserProvider);
+    final userId = user?.uid;
+    final displayName = user?.displayName.isEmpty == true
+        ? 'Kullanıcı'
+        : (user?.displayName ?? 'Kullanıcı');
     HapticFeedback.lightImpact();
     final repo = ref.read(taskRepositoryProvider);
     await repo.restoreTask(task.id);
+    if (userId != null) {
+      unawaited(recordRestored(
+        taskId: task.id,
+        userId: userId,
+        userDisplayName: displayName,
+      ));
+    }
     AutoSyncService.instance.flush();
     onRestore?.call();
   }

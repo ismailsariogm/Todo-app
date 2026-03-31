@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +13,7 @@ import '../../domain/entities/task_entity.dart';
 import '../../services/auto_sync_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/subtask_storage.dart';
+import '../../services/task_history_service.dart';
 import '../auth/auth_provider.dart';
 import 'widgets/create_folder_dialog.dart';
 import 'widgets/home_background.dart';
@@ -583,11 +586,38 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
       TaskEntity task;
       if (_isEdit && _original != null) {
         final userId = user.uid;
-        task = _original!.copyWith(
+        final displayName = user.displayName.isEmpty ? 'Kullanıcı' : user.displayName;
+        final orig = _original!;
+
+        // Collect changes for history
+        final changes = <Map<String, String>>[];
+        final newNotes = _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim();
+        if (orig.title != title) {
+          changes.add({'field': 'title', 'from': orig.title, 'to': title});
+        }
+        if ((orig.notes ?? '') != (newNotes ?? '')) {
+          changes.add({'field': 'notes', 'from': orig.notes ?? '', 'to': newNotes ?? ''});
+        }
+        if (orig.priority != _priority) {
+          changes.add({'field': 'priority', 'from': '${orig.priority}', 'to': '$_priority'});
+        }
+        if (orig.recurrenceRule != _recurrence) {
+          changes.add({'field': 'recurrenceRule', 'from': orig.recurrenceRule, 'to': _recurrence});
+        }
+        final origDue = orig.dueAt?.toIso8601String() ?? '';
+        final newDue = _dueAt?.toIso8601String() ?? '';
+        if (origDue != newDue) {
+          changes.add({'field': 'dueAt', 'from': origDue, 'to': newDue});
+        }
+        final origRem = orig.reminderAt?.toIso8601String() ?? '';
+        final newRem = _reminderAt?.toIso8601String() ?? '';
+        if (origRem != newRem) {
+          changes.add({'field': 'reminderAt', 'from': origRem, 'to': newRem});
+        }
+
+        task = orig.copyWith(
           title: title,
-          notes: _notesCtrl.text.trim().isEmpty
-              ? null
-              : _notesCtrl.text.trim(),
+          notes: newNotes,
           dueAt: _dueAt,
           clearDueAt: _dueAt == null,
           reminderAt: _reminderAt,
@@ -602,6 +632,16 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
           updatedByUserId: userId,
         );
         await repo.updateTask(task);
+
+        // Record edit history
+        if (changes.isNotEmpty) {
+          unawaited(recordEdited(
+            taskId: task.id,
+            userId: userId,
+            userDisplayName: displayName,
+            changes: changes,
+          ));
+        }
         final existing = await loadSubtasks(task.id);
         final byTitle = {for (var s in existing) s.title: s};
         final now = DateTime.now();
@@ -633,6 +673,13 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
           fileId: _fileId,
           deviceId: deviceId,
         );
+        // Record create history
+        final displayName = user.displayName.isEmpty ? 'Kullanıcı' : user.displayName;
+        unawaited(recordCreated(
+          taskId: task.id,
+          userId: user.uid,
+          userDisplayName: displayName,
+        ));
       }
 
       // Alt görevleri kaydet (sadece yeni görev için; düzenlemede yukarıda yapıldı)

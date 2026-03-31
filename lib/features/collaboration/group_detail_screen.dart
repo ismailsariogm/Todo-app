@@ -104,7 +104,8 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen>
   @override
   void dispose() {
     _tabCtrl.removeListener(_onTabChanged);
-    _updateBadgesForTab(_tabCtrl.index); // Çıkarken görüntülenen sekmenin bildirimini sıfırla
+    // NOT: ref.read() dispose() içinde çağrılamaz (Riverpod hata verir).
+    // Badge'ler onTabChanged ve ref.listen ile zaten güncellenir.
     _tabCtrl.dispose();
     _msgCtrl.dispose();
     super.dispose();

@@ -16,7 +16,24 @@ enum _ChartMetric { created, completed }
 
 enum _ChartPeriod { day, week, month, year }
 
-enum _SeriesKind { folder, lateCompleted, overdue, onTimeCompleted }
+enum _SeriesKind { folder, lateCompleted, deleted, onTimeCompleted }
+
+// ─── Sabit renk paleti — aynı isim her zaman aynı renk ─────────────────────
+const _kColorPalette = <Color>[
+  Color(0xFF6366F1), Color(0xFF3B82F6), Color(0xFF10B981),
+  Color(0xFFF59E0B), Color(0xFF8B5CF6), Color(0xFFF97316),
+  Color(0xFF14B8A6), Color(0xFFEC4899), Color(0xFF06B6D4),
+  Color(0xFF84CC16), Color(0xFFEAB308), Color(0xFF0EA5E9),
+];
+
+Color _colorForFolderName(String name) {
+  if (name.isEmpty) return const Color(0xFFB0BEC5);
+  var hash = 0;
+  for (final c in name.codeUnits) {
+    hash = (hash * 31 + c) & 0x7FFFFFFF;
+  }
+  return _kColorPalette[hash % _kColorPalette.length];
+}
 
 /// Tek grafik serisi (klasör veya özel kategori).
 class _ChartSeries {
@@ -53,17 +70,17 @@ class _FolderChartsScreenState extends ConsumerState<FolderChartsScreen>
   final Map<String, bool> _folderEnabled = {};
 
   bool _showLateCompleted = false;
-  bool _showOverdue = false;
+  bool _showDeleted = false;
   bool _showOnTimeCompleted = false;
+  final TransformationController _chartTransformCtrl = TransformationController();
 
   late final TabController _tabCtrl;
-  final ScrollController _lineHScrollCtrl = ScrollController();
 
   static const _animDuration = Duration(milliseconds: 750);
   static const _animCurve = Curves.easeOutCubic;
 
   static const _kLateColor = Color(0xFFFF9800);
-  static const _kOverdueColor = Color(0xFFE53935);
+  static const _kDeletedColor = Color(0xFFEF4444);
   static const _kOnTimeColor = Color(0xFF43A047);
 
   @override
@@ -75,7 +92,7 @@ class _FolderChartsScreenState extends ConsumerState<FolderChartsScreen>
   @override
   void dispose() {
     _tabCtrl.dispose();
-    _lineHScrollCtrl.dispose();
+    _chartTransformCtrl.dispose();
     super.dispose();
   }
 
@@ -127,13 +144,13 @@ class _FolderChartsScreenState extends ConsumerState<FolderChartsScreen>
         ),
       );
     }
-    if (_showOverdue) {
+    if (_showDeleted) {
       out.add(
         const _ChartSeries(
-          key: 'overdue',
-          name: 'Süresi biten',
-          color: _kOverdueColor,
-          kind: _SeriesKind.overdue,
+          key: 'deleted',
+          name: 'Silinen Görevler',
+          color: _kDeletedColor,
+          kind: _SeriesKind.deleted,
         ),
       );
     }
@@ -152,9 +169,9 @@ class _FolderChartsScreenState extends ConsumerState<FolderChartsScreen>
 
   Map<String, Color> _folderPalette(List<TaskFileEntity> files) {
     final m = <String, Color>{};
-    for (var i = 0; i < files.length; i++) {
-      final base = _parseColor(files[i].colorHex);
-      m[files[i].id] = _distinctColor(base, i, files.length);
+    for (final f in files) {
+      // Aynı isim her zaman aynı renk alır
+      m[f.id] = _colorForFolderName(f.name);
     }
     return m;
   }
@@ -225,7 +242,7 @@ class _FolderChartsScreenState extends ConsumerState<FolderChartsScreen>
                     ),
                   const Divider(color: Colors.white24),
                   Text(
-                    'Durum (tamamlanma / süre)',
+                    'Durum analizleri',
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.8),
                       fontSize: 12,
@@ -252,15 +269,15 @@ class _FolderChartsScreenState extends ConsumerState<FolderChartsScreen>
                   ),
                   SwitchListTile.adaptive(
                     dense: true,
-                    value: _showOverdue,
-                    onChanged: (v) => setState(() => _showOverdue = v),
-                    activeThumbColor: _kOverdueColor,
+                    value: _showDeleted,
+                    onChanged: (v) => setState(() => _showDeleted = v),
+                    activeThumbColor: _kDeletedColor,
                     title: const Text(
-                      'Süresi biten',
+                      'Silinen Görevler',
                       style: TextStyle(color: Colors.white, fontSize: 13),
                     ),
                     subtitle: Text(
-                      'Son tarihi geçmiş, henüz bitmeyenler',
+                      'Çöp kutusundaki silinen görevler',
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.5),
                         fontSize: 11,
@@ -327,7 +344,7 @@ class _FolderChartsScreenState extends ConsumerState<FolderChartsScreen>
               onPressed: () => context.pop(),
             ),
             title: const Text(
-              'Grafik',
+              'Görev Analizi',
               style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w600,
@@ -640,6 +657,16 @@ class _FolderChartsScreenState extends ConsumerState<FolderChartsScreen>
     );
     final maxY = _maxLineY(matrix, series.length, buckets.length);
     final cap = maxY <= 0 ? 4.0 : (maxY * 1.2).clamp(4.0, double.infinity);
+    final totals = _sliceTotals(matrix, series.length, buckets.length);
+
+    // Peak indeksleri — her seri için en yüksek bucket
+    final peakIndices = List.generate(series.length, (s) {
+      var best = 0;
+      for (var i = 1; i < buckets.length; i++) {
+        if (matrix[s][i] > matrix[s][best]) best = i;
+      }
+      return best;
+    });
 
     final lineBars = <LineChartBarData>[];
     for (var s = 0; s < series.length; s++) {
@@ -648,22 +675,30 @@ class _FolderChartsScreenState extends ConsumerState<FolderChartsScreen>
         (i) => FlSpot(i.toDouble(), matrix[s][i]),
       );
       final c = series[s].color;
+      final peakIdx = peakIndices[s];
+      final serIndex = s; // capture for closure
       lineBars.add(
         LineChartBarData(
           spots: spots,
           isCurved: true,
           curveSmoothness: 0.22,
           color: c,
-          barWidth: 2.4,
+          barWidth: 3.5,
           isStrokeCapRound: true,
           dotData: FlDotData(
             show: true,
-            getDotPainter: (sp, p, bar, i) => FlDotCirclePainter(
-              radius: 3.2,
-              color: c,
-              strokeWidth: 1.5,
-              strokeColor: Colors.white,
-            ),
+            getDotPainter: (sp, p, bar, i) {
+              // Peak noktasına "i" ikonu çiz
+              if (i == peakIdx && matrix[serIndex][i] > 0) {
+                return _IPeakDotPainter(color: c);
+              }
+              return FlDotCirclePainter(
+                radius: 4.5,
+                color: c,
+                strokeWidth: 2.0,
+                strokeColor: Colors.white,
+              );
+            },
           ),
           belowBarData: BarAreaData(
             show: true,
@@ -683,13 +718,31 @@ class _FolderChartsScreenState extends ConsumerState<FolderChartsScreen>
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
-        Text(
-          'Zaman içinde trend (sürükleyerek sağa kaydırın)',
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.92),
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Zaman içinde trend',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.92),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            // Görünümü sıfırla
+            IconButton(
+              icon: const Icon(
+                Icons.zoom_out_map_rounded,
+                color: Colors.white70,
+                size: 20,
+              ),
+              tooltip: 'Görünümü sıfırla',
+              padding: const EdgeInsets.all(4),
+              constraints: const BoxConstraints(),
+              onPressed: () => _chartTransformCtrl.value = Matrix4.identity(),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         _sharedControls(),
@@ -698,22 +751,16 @@ class _FolderChartsScreenState extends ConsumerState<FolderChartsScreen>
         const SizedBox(height: 12),
         LayoutBuilder(
           builder: (context, c) {
-            final vw = c.maxWidth;
-            final minChartW = math.max(vw, buckets.length * 56.0);
-            return Scrollbar(
-              controller: _lineHScrollCtrl,
-              thumbVisibility: true,
-              trackVisibility: true,
-              child: SingleChildScrollView(
-                controller: _lineHScrollCtrl,
-                scrollDirection: Axis.horizontal,
-                dragStartBehavior: DragStartBehavior.down,
-                physics: const BouncingScrollPhysics(
-                  parent: AlwaysScrollableScrollPhysics(),
-                ),
+            return ClipRect(
+              child: InteractiveViewer(
+                transformationController: _chartTransformCtrl,
+                minScale: 0.8,
+                maxScale: 10.0,
+                boundaryMargin: const EdgeInsets.all(double.infinity),
+                trackpadScrollCausesScale: true,
                 child: SizedBox(
-                  width: minChartW,
-                  height: 320,
+                  width: c.maxWidth,
+                  height: 440,
                   child: TweenAnimationBuilder<double>(
                     key: ValueKey(
                       '${series.map((e) => e.key).join('|')}_$_period$_metric',
@@ -748,9 +795,8 @@ class _FolderChartsScreenState extends ConsumerState<FolderChartsScreen>
                                   getTitlesWidget: (v, m) => Text(
                                     v.toInt().toString(),
                                     style: TextStyle(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.75,
-                                      ),
+                                      color: Colors.white
+                                          .withValues(alpha: 0.75),
                                       fontSize: 10,
                                     ),
                                   ),
@@ -767,13 +813,13 @@ class _FolderChartsScreenState extends ConsumerState<FolderChartsScreen>
                                       return const SizedBox.shrink();
                                     }
                                     return Padding(
-                                      padding: const EdgeInsets.only(top: 6),
+                                      padding:
+                                          const EdgeInsets.only(top: 6),
                                       child: Text(
                                         labels[i],
                                         style: TextStyle(
-                                          color: Colors.white.withValues(
-                                            alpha: 0.8,
-                                          ),
+                                          color: Colors.white
+                                              .withValues(alpha: 0.8),
                                           fontSize: 8.5,
                                         ),
                                         maxLines: 1,
@@ -792,38 +838,68 @@ class _FolderChartsScreenState extends ConsumerState<FolderChartsScreen>
                             ),
                             lineTouchData: LineTouchData(
                               handleBuiltInTouches: true,
+                              touchCallback: (event, response) {
+                                // "i" ikonuna tıklanınca peak detay sayfası aç
+                                if (event is! FlTapUpEvent) return;
+                                final spots = response?.lineBarSpots;
+                                if (spots == null || spots.isEmpty) return;
+                                for (final sp in spots) {
+                                  if (sp.barIndex < series.length &&
+                                      sp.spotIndex ==
+                                          peakIndices[sp.barIndex] &&
+                                      matrix[sp.barIndex]
+                                              [sp.spotIndex] >
+                                          0) {
+                                    WidgetsBinding.instance
+                                        .addPostFrameCallback((_) {
+                                      if (!mounted) return;
+                                      _showPeakDetail(
+                                        context: context,
+                                        series: series[sp.barIndex],
+                                        bucketIndex: sp.spotIndex,
+                                        buckets: buckets,
+                                        period: _period,
+                                        metric: _metric,
+                                        tasks: tasks,
+                                      );
+                                    });
+                                    break;
+                                  }
+                                }
+                              },
                               touchTooltipData: LineTouchTooltipData(
                                 maxContentWidth: 240,
                                 getTooltipColor: (_) =>
                                     Colors.black.withValues(alpha: 0.9),
-                                tooltipPadding: const EdgeInsets.symmetric(
+                                tooltipPadding:
+                                    const EdgeInsets.symmetric(
                                   horizontal: 12,
                                   vertical: 10,
                                 ),
                                 getTooltipItems: (spots) {
                                   if (spots.isEmpty) return [];
-                                  final bx = spots.first.x.toInt();
-                                  if (bx < 0 || bx >= buckets.length) {
-                                    return spots
-                                        .map(
-                                          (sp) => LineTooltipItem(
-                                            '${series[sp.barIndex].name}: ${sp.y.toInt()}',
-                                            const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 11,
-                                            ),
-                                          ),
-                                        )
-                                        .toList();
+                                  // Sadece en yüksek değerli seriyi göster
+                                  var maxIdx = 0;
+                                  for (var i = 1; i < spots.length; i++) {
+                                    if (spots[i].y > spots[maxIdx].y) {
+                                      maxIdx = i;
+                                    }
                                   }
-                                  final range = _formatBucketRangeWithHours(
-                                    buckets[bx],
-                                    _period,
-                                  );
-                                  return spots.map((sp) {
+                                  final bx = spots[maxIdx].x.toInt();
+                                  final range =
+                                      (bx >= 0 && bx < buckets.length)
+                                          ? _formatBucketRangeWithHours(
+                                              buckets[bx], _period)
+                                          : '';
+                                  return spots
+                                      .asMap()
+                                      .entries
+                                      .map((e) {
+                                    if (e.key != maxIdx) return null;
+                                    final sp = e.value;
                                     final n = series[sp.barIndex].name;
                                     return LineTooltipItem(
-                                      '$range\n$n: ${sp.y.toInt()}',
+                                      '${range.isNotEmpty ? "$range\n" : ""}$n: ${sp.y.toInt()}',
                                       TextStyle(
                                         color: series[sp.barIndex].color,
                                         fontWeight: FontWeight.w700,
@@ -847,29 +923,101 @@ class _FolderChartsScreenState extends ConsumerState<FolderChartsScreen>
             );
           },
         ),
-        const SizedBox(height: 12),
-        _LegendSeries(
-          series: series,
-          totals: _sliceTotals(matrix, series.length, buckets.length),
-        ),
+        const SizedBox(height: 16),
+        // ── Rapor / Gösterge ──────────────────────────────────────────────
+        _ReportCard(series: series, totals: totals),
         const SizedBox(height: 8),
-        Text(
-          'İpucu: Grafik genişlediğinde alt çubuğu sürükleyin veya '
-          'yüzeyi yatay kaydırın.',
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.55),
-            fontSize: 11,
+        Center(
+          child: Text(
+            'İpucu: Fare tekerleği veya dokunmatik ekranda çift parmak ile yaklaştır · Sürükle ile kaydır · ⓘ ikonuna tıkla detay gör',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.5),
+              fontSize: 11,
+            ),
+            textAlign: TextAlign.center,
           ),
         ),
       ],
     );
   }
+
+  void _showPeakDetail({
+    required BuildContext context,
+    required _ChartSeries series,
+    required int bucketIndex,
+    required List<DateTime> buckets,
+    required _ChartPeriod period,
+    required _ChartMetric metric,
+    required List<TaskEntity> tasks,
+  }) {
+    final start = buckets[bucketIndex];
+    final end = _bucketEnd(start, period);
+    final label = _formatBucketRangeWithHours(start, period);
+
+    // Bu seri + bucket için görevleri filtrele
+    final matchingTasks = tasks.where((t) {
+      if (series.kind == _SeriesKind.deleted) {
+        if (!t.isDeleted || t.deletedAt == null) return false;
+        final ev = t.deletedAt!.toLocal();
+        return _inBucket(ev, start, period);
+      }
+      if (t.isDeleted) return false;
+      if (series.kind == _SeriesKind.folder) {
+        final fid = t.fileId ?? '';
+        if (fid != (series.folderId ?? '')) return false;
+        final ev = metric == _ChartMetric.created
+            ? t.createdAt.toLocal()
+            : (t.completedAt?.toLocal());
+        if (ev == null) return false;
+        return _inBucket(ev, start, period);
+      }
+      if (series.kind == _SeriesKind.lateCompleted) {
+        if (!t.isCompletedLate || t.completedAt == null) return false;
+        return _inBucket(t.completedAt!.toLocal(), start, period);
+      }
+      if (series.kind == _SeriesKind.onTimeCompleted) {
+        if (!_onTimeCompleted(t)) return false;
+        return _inBucket(t.completedAt!.toLocal(), start, period);
+      }
+      return false;
+    }).toList()
+      ..sort((a, b) {
+        final ta = _taskSortDate(a, series, metric);
+        final tb = _taskSortDate(b, series, metric);
+        if (ta == null && tb == null) return 0;
+        if (ta == null) return 1;
+        if (tb == null) return -1;
+        return ta.compareTo(tb);
+      });
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _PeakDetailSheet(
+        series: series,
+        label: label,
+        tasks: matchingTasks,
+        metric: metric,
+      ),
+    );
+  }
+
+  DateTime? _taskSortDate(
+      TaskEntity t, _ChartSeries series, _ChartMetric metric) {
+    if (series.kind == _SeriesKind.deleted) return t.deletedAt;
+    if (series.kind == _SeriesKind.lateCompleted ||
+        series.kind == _SeriesKind.onTimeCompleted) return t.completedAt;
+    if (metric == _ChartMetric.created) return t.createdAt;
+    return t.completedAt;
+  }
 }
 
 bool _onTimeCompleted(TaskEntity t) {
-  if (!t.isCompleted || t.completedAt == null || t.dueAt == null) {
-    return false;
-  }
+  if (!t.isCompleted || t.completedAt == null) return false;
+  // Son tarih belirtilmemişse, tamamlanan görev zamanında sayılır.
+  if (t.dueAt == null) return true;
   return !t.completedAt!.isAfter(t.dueAt!);
 }
 
@@ -886,8 +1034,10 @@ List<List<double>> _countMatrixForSeries({
 
   for (var si = 0; si < m; si++) {
     final ser = series[si];
+    // Deleted serisi için isDeleted=true, diğerleri için isDeleted=false
+    final isDeletedSeries = ser.kind == _SeriesKind.deleted;
     for (final t in tasks) {
-      if (t.isDeleted) continue;
+      if (t.isDeleted != isDeletedSeries) continue;
 
       switch (ser.kind) {
         case _SeriesKind.folder:
@@ -928,10 +1078,11 @@ List<List<double>> _countMatrixForSeries({
               break;
             }
           }
-        case _SeriesKind.overdue:
-          if (t.isCompleted || t.dueAt == null) continue;
+        case _SeriesKind.deleted:
+          if (metric == _ChartMetric.created) break;
+          if (t.deletedAt == null) continue;
           if (!_taskInScope(t, series)) continue;
-          final ev = t.dueAt!.toLocal();
+          final ev = t.deletedAt!.toLocal();
           for (var i = 0; i < n; i++) {
             if (_inBucket(ev, buckets[i], period)) {
               matrix[si][i] += 1;
@@ -944,7 +1095,7 @@ List<List<double>> _countMatrixForSeries({
   return matrix;
 }
 
-/// Durum serileri için klasör filtresi (üst state’ten erişilemez — global fonksiyon yerine seri listesi ile).
+/// Kapsam filtresi — hangi klasorde oldugunu kontrol eder.
 bool _taskInScope(TaskEntity t, List<_ChartSeries> allSeries) {
   final hasFolderSelection = allSeries.any((s) => s.kind == _SeriesKind.folder);
   if (!hasFolderSelection) return true;
@@ -1099,6 +1250,7 @@ class _LegendSeries extends StatelessWidget {
     return Wrap(
       spacing: 10,
       runSpacing: 8,
+      alignment: WrapAlignment.center,
       children: [
         for (var i = 0; i < series.length; i++)
           Row(
@@ -1134,6 +1286,451 @@ class _LegendSeries extends StatelessWidget {
             ],
           ),
       ],
+    );
+  }
+}
+
+// ─── Zoom Control ─────────────────────────────────────────────────────────────
+
+class _ZoomControl extends StatelessWidget {
+  const _ZoomControl({
+    required this.zoomLevel,
+    required this.onZoomIn,
+    required this.onZoomOut,
+    required this.onReset,
+  });
+  final double zoomLevel;
+  final VoidCallback onZoomIn;
+  final VoidCallback onZoomOut;
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.zoom_out, size: 18, color: Colors.white),
+            padding: const EdgeInsets.all(4),
+            constraints: const BoxConstraints(),
+            onPressed: onZoomOut,
+            tooltip: 'Uzaklaştır',
+          ),
+          GestureDetector(
+            onTap: onReset,
+            child: Text(
+              '${(zoomLevel * 100).toInt()}%',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.zoom_in, size: 18, color: Colors.white),
+            padding: const EdgeInsets.all(4),
+            constraints: const BoxConstraints(),
+            onPressed: onZoomIn,
+            tooltip: 'Yaklaştır',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Report Card ──────────────────────────────────────────────────────────────
+
+class _ReportCard extends StatelessWidget {
+  const _ReportCard({required this.series, required this.totals});
+  final List<_ChartSeries> series;
+  final List<double> totals;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = totals.fold<double>(0, (a, b) => a + b);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.bar_chart_rounded, color: Colors.white70, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'Dönem Raporu',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  'Toplam: ${total.toInt()}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            alignment: WrapAlignment.start,
+            children: [
+              for (var i = 0; i < series.length; i++)
+                _ReportChip(
+                  color: series[i].color,
+                  name: series[i].name,
+                  count: totals[i].toInt(),
+                  percent: total > 0
+                      ? (totals[i] / total * 100).toStringAsFixed(1)
+                      : '0.0',
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReportChip extends StatelessWidget {
+  const _ReportChip({
+    required this.color,
+    required this.name,
+    required this.count,
+    required this.percent,
+  });
+  final Color color;
+  final String name;
+  final int count;
+  final String percent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration:
+                BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            name,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.9),
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '$count ($percent%)',
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Peak "i" Dot Painter ─────────────────────────────────────────────────────
+
+class _IPeakDotPainter extends FlDotPainter {
+  const _IPeakDotPainter({required this.color});
+  final Color color;
+
+  @override
+  void draw(Canvas canvas, FlSpot spot, Offset center) {
+    // Arka plan daire
+    final fill = Paint()..color = color..style = PaintingStyle.fill;
+    canvas.drawCircle(center, 10, fill);
+    // Beyaz kenarlık
+    final border = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawCircle(center, 10, border);
+    // "i" harfini elle çiz
+    final dot = Paint()..color = Colors.white..style = PaintingStyle.fill;
+    canvas.drawCircle(center + const Offset(0, -4), 1.5, dot);
+    final line = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(
+      center + const Offset(0, -1),
+      center + const Offset(0, 4.5),
+      line,
+    );
+  }
+
+  @override
+  Size getSize(FlSpot spot) => const Size(20, 20);
+
+  @override
+  Color get mainColor => color;
+
+  @override
+  FlDotPainter lerp(FlDotPainter a, FlDotPainter b, double t) {
+    if (a is _IPeakDotPainter && b is _IPeakDotPainter) {
+      return _IPeakDotPainter(
+        color: Color.lerp(a.color, b.color, t) ?? color,
+      );
+    }
+    return b;
+  }
+
+  @override
+  List<Object?> get props => [color];
+}
+
+// ─── Peak Detail Sheet ────────────────────────────────────────────────────────
+
+class _PeakDetailSheet extends StatelessWidget {
+  const _PeakDetailSheet({
+    required this.series,
+    required this.label,
+    required this.tasks,
+    required this.metric,
+  });
+
+  final _ChartSeries series;
+  final String label;
+  final List<TaskEntity> tasks;
+  final _ChartMetric metric;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      constraints:
+          BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: series.color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        series.name,
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: series.color,
+                                ),
+                      ),
+                      Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: cs.onSurface.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: series.color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${tasks.length} görev',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: series.color,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: cs.outlineVariant.withValues(alpha: 0.4)),
+          if (tasks.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(32),
+              child: Text(
+                'Bu dönemde görev bulunamadı.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: cs.onSurface.withValues(alpha: 0.4),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            )
+          else
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                itemCount: tasks.length,
+                itemBuilder: (ctx, idx) {
+                  final t = tasks[idx];
+                  return _PeakTaskTile(
+                      task: t, series: series, metric: metric);
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PeakTaskTile extends StatelessWidget {
+  const _PeakTaskTile({
+    required this.task,
+    required this.series,
+    required this.metric,
+  });
+  final TaskEntity task;
+  final _ChartSeries series;
+  final _ChartMetric metric;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final df = DateFormat('d MMM yyyy, HH:mm', 'tr_TR');
+    final createdStr = df.format(task.createdAt.toLocal());
+
+    String? actionLabel;
+    String? actionDate;
+    if (series.kind == _SeriesKind.deleted && task.deletedAt != null) {
+      actionLabel = 'Silindi';
+      actionDate = df.format(task.deletedAt!.toLocal());
+    } else if ((series.kind == _SeriesKind.lateCompleted ||
+            series.kind == _SeriesKind.onTimeCompleted) &&
+        task.completedAt != null) {
+      actionLabel = 'Tamamlandı';
+      actionDate = df.format(task.completedAt!.toLocal());
+    } else if (metric == _ChartMetric.completed && task.completedAt != null) {
+      actionLabel = 'Tamamlandı';
+      actionDate = df.format(task.completedAt!.toLocal());
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: series.color.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(12),
+        border:
+            Border.all(color: series.color.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            task.title,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Icon(Icons.add_circle_outline_rounded,
+                  size: 12, color: cs.onSurface.withValues(alpha: 0.5)),
+              const SizedBox(width: 4),
+              Text(
+                'Oluşturuldu: $createdStr',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: cs.onSurface.withValues(alpha: 0.5),
+                ),
+              ),
+            ],
+          ),
+          if (actionLabel != null && actionDate != null) ...[
+            const SizedBox(height: 2),
+            Row(
+              children: [
+                Icon(
+                  series.kind == _SeriesKind.deleted
+                      ? Icons.delete_outline_rounded
+                      : Icons.check_circle_outline_rounded,
+                  size: 12,
+                  color: series.color,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '$actionLabel: $actionDate',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: series.color,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
